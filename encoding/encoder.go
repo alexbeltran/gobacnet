@@ -22,6 +22,16 @@ type Encoder struct {
 	buff *bytes.Buffer
 }
 
+func NewEncoder() *Encoder {
+	e := Encoder{}
+	e.buff = new(bytes.Buffer)
+	return &e
+}
+
+func (e *Encoder) Bytes() []byte {
+	return e.buff.Bytes()
+}
+
 func (e *Encoder) readProperty(in []byte, invokeID uint8, data ReadPropertyData) (b []byte, err error) {
 	buff := bytes.NewBuffer(in)
 	write := func(p interface{}) {
@@ -142,9 +152,9 @@ func (e *Encoder) enumerated(value uint32) {
 
 // weird, huh?
 func (e *Encoder) unsigned24(value uint32) {
-	e.write((value & 0xFF0000) >> 16)
-	e.write((value & 0x00FF00) >> 8)
-	e.write(value & 0x0000FF)
+	e.write(uint8((value & 0xFF0000) >> 16))
+	e.write(uint8((value & 0x00FF00) >> 8))
+	e.write(uint8(value & 0x0000FF))
 
 }
 
