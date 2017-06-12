@@ -33,3 +33,50 @@ func TestSegsApduEncode(t *testing.T) {
 		}
 	}
 }
+
+func TestObject(t *testing.T) {
+	e := NewEncoder()
+	var inObjectType uint16 = 17
+	var inInstance uint32 = 23
+	e.objectId(inObjectType, inInstance)
+	b := e.Bytes()
+	t.Log(b)
+
+	d := NewDecoder(b)
+	outObject, outInstance, err := d.objectId()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if inObjectType != outObject {
+		t.Fatalf("There was an issue encoding/decoding objectType. Input value was %d and output value was %d", inObjectType, outObject)
+	}
+
+	if inInstance != outInstance {
+		t.Fatalf("There was an issue encoding/decoding objectType. Input value was %d and output value was %d", inInstance, outInstance)
+	}
+}
+
+func TestEnumerated(t *testing.T) {
+	lengths := []int{size8, size16, size24, size32, size32}
+	tests := []uint32{1, 2 << 8, 3 << 17, 7 << 25, 8 << 26}
+	e := NewEncoder()
+	for _, val := range tests {
+		e.enumerated(val)
+	}
+	b := e.Bytes()
+	d := NewDecoder(b)
+	for i, val := range tests {
+		x := d.enumerated(lengths[i])
+		if x != val {
+			t.Fatalf("Test[%d]:Decoded value %d doesn't match encoded value %d", i+1, x, val)
+		}
+	}
+
+	d = NewDecoder(b)
+	// 1000 is not a valid length
+	x := d.enumerated(1000)
+	if x != 0 {
+		t.Fatalf("For invalid lengths, the value 0 should be decoded. The value %d was decoded", x)
+	}
+}
