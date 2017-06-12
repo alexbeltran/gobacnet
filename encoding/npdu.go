@@ -3,7 +3,6 @@ package encoding
 import (
 	"bytes"
 	"encoding/binary"
-	"log"
 )
 
 type MessagePriority uint8
@@ -126,7 +125,6 @@ func encodeMaxSegsMaxApdu(maxSegs int, maxApdu int) uint8 {
 	// 6 is chosen since 2^6 is 64 at which point we hit special cases
 	var i uint
 	for i = 0; i < 6; i++ {
-		log.Println(1 << (i + 1))
 		if maxSegs < 1<<(i+1) {
 			octet = uint8(i << 4)
 			break
