@@ -7,78 +7,68 @@ import (
 
 var encodingEndian binary.ByteOrder = binary.BigEndian
 
-type ReadPropertyData struct {
-	ObjectType         uint16
-	ObjectInstance     uint32
-	ObjectProperty     uint32
-	ArrayIndex         uint32
-	ApplicationData    []uint8
-	ApplicationDataLen int
-	ErrorClass         uint8
-	ErrorCode          uint8
-}
-
 type Encoder struct {
 	buff *bytes.Buffer
+	err  error
 }
 
 func NewEncoder() *Encoder {
-	e := Encoder{}
-	e.buff = new(bytes.Buffer)
+	e := Encoder{
+		buff: new(bytes.Buffer),
+		err:  nil,
+	}
 	return &e
+}
+
+func (e *Encoder) Error() error {
+	return e.err
 }
 
 func (e *Encoder) Bytes() []byte {
 	return e.buff.Bytes()
 }
 
-func (e *Encoder) readProperty(in []byte, invokeID uint8, data ReadPropertyData) (b []byte, err error) {
-	buff := bytes.NewBuffer(in)
-	write := func(p interface{}) {
-		if err != nil {
-			return
-		}
-		err = binary.Write(buff, binary.LittleEndian, p)
+func (e *Encoder) write(p interface{}) {
+	if e.err != nil {
+		return
 	}
-	write(pduTypeConfirmedServiceRequest)
-	write(encodeMaxSegsMaxApdu(0, maxApdu))
-	write(invokeID)
-	write(ReadPropertyService)
+	e.err = binary.Write(e.buff, encodingEndian, p)
+}
+
+func (e *Encoder) readProperty(invokeID uint8, data ReadPropertyData) {
+	e.write(pduTypeConfirmedServiceRequest)
+	e.write(encodeMaxSegsMaxApdu(0, maxApdu))
+	e.write(invokeID)
+	e.write(ReadPropertyService)
+
+	var tagCounter uint8 = 0
 	if data.ObjectType < MaxObject {
-		e.contextObjectID(0, data.ObjectType, data.ObjectInstance)
+		e.contextObjectID(tagCounter, data.ObjectType, data.ObjectInstance)
+		tagCounter++
 	}
 
 	if data.ObjectProperty < MaxPropertyID {
-		e.contextEnumerated(1, data.ObjectProperty)
+		e.contextEnumerated(tagCounter, data.ObjectProperty)
+		tagCounter++
 	}
 
-	return buff.Bytes(), err
+	if data.ArrayIndex != ArrayAll {
+		e.contextUnsigned(tagCounter, data.ArrayIndex)
+		tagCounter++
+	}
+	return
 }
 
-func (e *Encoder) contextObjectID(tagNum uint8, objectType uint16, instance uint32) error {
+func (e *Encoder) contextObjectID(tagNum uint8, objectType uint16, instance uint32) {
 	/* length of object id is 4 octets, as per 20.2.14 */
-	err := e.tag(tagNum, true, 4)
-	if err != nil {
-		return err
-	}
-	return e.objectId(objectType, instance)
+	e.tag(tagNum, true, 4)
+	e.objectId(objectType, instance)
 }
 
-func (e *Encoder) write(p interface{}) error {
-	return binary.Write(e.buff, encodingEndian, p)
-}
-
-func (e *Encoder) tag(tagNum uint8, contextSpecific bool, lenValueType uint32) (err error) {
+func (e *Encoder) tag(tagNum uint8, contextSpecific bool, lenValueType uint32) {
 	var t uint8 = 0
-	write := func(p interface{}) {
-		if err != nil {
-			return
-		}
-		err = e.write(p)
-	}
-
 	if contextSpecific {
-		t = 1 << 3
+		t = setContextSpecific(t)
 	}
 
 	// I have no idea why this is here.
@@ -92,58 +82,45 @@ func (e *Encoder) tag(tagNum uint8, contextSpecific bool, lenValueType uint32) (
 
 	// We have enough room to put it with the last value
 	if tagNum <= 14 {
-		t |= tagNum
-		write(t)
+		t |= (tagNum << 4)
+		e.write(t)
 
 		// We don't have enough space so make it in a new byte
 	} else {
 		t |= 0xF0
-		write(t)
-		write(tagNum)
+		e.write(t)
+		e.write(tagNum)
 	}
 	if lenValueType > 4 {
 		// Depending on the length, we will either write it as an 8 bit, 32 bit, or 64 bit integer
 		if lenValueType <= 253 {
-			write(uint8(lenValueType))
+			e.write(uint8(lenValueType))
 		} else if lenValueType <= 65535 {
-			write(254)
-			write(uint16(lenValueType))
+			e.write(254)
+			e.write(uint16(lenValueType))
 		} else {
-			write(255)
-			write(lenValueType)
+			e.write(255)
+			e.write(lenValueType)
 		}
 	}
-	return nil
 }
 
 /* from clause 20.2.14 Encoding of an Object Identifier Value
 returns the number of apdu bytes consumed */
-func (e *Encoder) objectId(objectType uint16, instance uint32) error {
-	var value uint32 = 0
+func (e *Encoder) objectId(objectType uint16, instance uint32) {
+	var value uint32
 	value = ((uint32(objectType) & MaxObject) << InstanceBits) | (instance & MaxInstance)
-	return e.write(value)
+	e.write(value)
 }
 
-func (e *Encoder) contextEnumerated(tagNumber uint8, value uint32) error {
-	var len int
-	/* length of enumerated is variable, as per 20.2.11 */
-	if value < 0x100 {
-		len = 1
-	} else if value < 0x10000 {
-		len = 2
-	} else if value < 0x1000000 {
-		len = 3
-	} else {
-		len = 4
-	}
+func (e *Encoder) contextEnumerated(tagNumber uint8, value uint32) {
+	e.contextUnsigned(tagNumber, value)
+}
 
-	err := e.tag(tagNumber, true, uint32(len))
-	if err != nil {
-		return err
-	}
-
-	e.enumerated(value)
-	return nil
+func (e *Encoder) contextUnsigned(tagNumber uint8, value uint32) {
+	len := valueLength(value)
+	e.tag(tagNumber, true, uint32(len))
+	e.unsigned(value)
 }
 
 func (e *Encoder) enumerated(value uint32) {

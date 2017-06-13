@@ -16,6 +16,7 @@ const LifeSafety MessagePriority = 3
 type ConfirmedService uint8
 
 const ReadPropertyService ConfirmedService = 12
+const pduTypeConfirmedServiceRequest uint8 = 0
 
 const NetworkMessageInvalid = 0xFF
 
@@ -114,8 +115,6 @@ func encodeNPDU(expectingReply bool, priority MessagePriority) npdu {
 		HopCount:            HopCountDefault,
 	}
 }
-
-const pduTypeConfirmedServiceRequest = 0
 
 /* from clause 20.1.2.4 max-segments-accepted and clause 20.1.2.5 max-APDU-length-accepted
 returns the encoded octet */

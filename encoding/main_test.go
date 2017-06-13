@@ -43,10 +43,7 @@ func TestObject(t *testing.T) {
 	t.Log(b)
 
 	d := NewDecoder(b)
-	outObject, outInstance, err := d.objectId()
-	if err != nil {
-		t.Fatal(err)
-	}
+	outObject, outInstance := d.objectId()
 
 	if inObjectType != outObject {
 		t.Fatalf("There was an issue encoding/decoding objectType. Input value was %d and output value was %d", inObjectType, outObject)
@@ -54,6 +51,10 @@ func TestObject(t *testing.T) {
 
 	if inInstance != outInstance {
 		t.Fatalf("There was an issue encoding/decoding objectType. Input value was %d and output value was %d", inInstance, outInstance)
+	}
+
+	if err := d.Error(); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -79,4 +80,44 @@ func TestEnumerated(t *testing.T) {
 	if x != 0 {
 		t.Fatalf("For invalid lengths, the value 0 should be decoded. The value %d was decoded", x)
 	}
+}
+
+const compareErrFmt = "Mismatch in %s when decoding values. Expected: %d, recieved: %d"
+
+func compare(t *testing.T, name string, a uint, b uint) {
+	// See if the initial read property data matches the output read property
+	if a != b {
+		t.Fatal(compareErrFmt, name, a, b)
+	}
+}
+
+func TestReadingProperty(t *testing.T) {
+	e := NewEncoder()
+	rd := ReadPropertyData{
+		ObjectType:     37,
+		ObjectInstance: 1000,
+		ObjectProperty: 3921,
+		ArrayIndex:     0,
+	}
+	e.readProperty(10, rd)
+	if err := e.Error(); err != nil {
+		t.Fatal(err)
+	}
+
+	b := e.Bytes()
+	d := NewDecoder(b)
+
+	// Read Property reads 4 extra fields that are not original encoded. Need to
+	//find out where these 4 fields come from
+	d.buff.Read(make([]uint8, 4))
+	err, outRd := d.readProperty()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// See if the initial read property data matches the output read property
+	compare(t, "object instance", uint(rd.ObjectInstance), uint(outRd.ObjectInstance))
+	compare(t, "boject type", uint(rd.ObjectType), uint(outRd.ObjectType))
+	compare(t, "object property", uint(rd.ObjectProperty), uint(outRd.ObjectProperty))
+	compare(t, "array index", uint(rd.ArrayIndex), uint(outRd.ArrayIndex))
 }
