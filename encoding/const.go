@@ -10,3 +10,5 @@ const (
 	size24 = 3
 	size32 = 4
 )
+
+const ArrayAll = 0xFFFFFFFF
