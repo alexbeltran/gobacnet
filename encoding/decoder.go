@@ -62,10 +62,10 @@ func (d *Decoder) decode(data interface{}) {
 	d.err = binary.Read(d.buff, encodingEndian, data)
 }
 
-func (d *Decoder) readProperty() (err error, data ReadPropertyData) {
+func (d *Decoder) readProperty() (data ReadPropertyData, err error) {
 	// tag counter should be incremented every time a tag is read. this is important
 	// to make sure that the correct order is read.
-	var tagCounter uint8 = 0
+	var tagCounter uint8
 
 	// Tag checker checks the passed tag and increments the tag counter
 	tagCheck := func(inTag uint8) error {
@@ -141,7 +141,6 @@ func (d *Decoder) tagNumber() (tag uint8, meta uint8) {
 	// Read the first value
 	d.decode(&meta)
 	if isExtendedTagNumber(meta) {
-
 		d.decode(&tag)
 		return tag, meta
 	}
@@ -150,17 +149,17 @@ func (d *Decoder) tagNumber() (tag uint8, meta uint8) {
 
 func (d *Decoder) tagNumberAndValue() (tag uint8, value uint32) {
 	tag, meta := d.tagNumber()
-	if isExtendedTagNumber(meta) {
+	if isExtendedValue(meta) {
 		var val uint8
 		d.decode(&val)
 		// Tagged as an uint32
-		if val == 255 {
+		if val == flag32bit {
 			var parse uint32
 			d.decode(&parse)
 			return tag, parse
 
 			// Tagged as a uint16
-		} else if val == 254 {
+		} else if val == flag16bit {
 			var parse uint16
 			d.decode(&parse)
 			return tag, uint32(parse)
@@ -183,22 +182,6 @@ func (d *Decoder) objectId() (objectType uint16, instance uint32) {
 	objectType = uint16((value >> InstanceBits) & MaxObject)
 	instance = value & MaxInstance
 	return
-}
-
-func isExtendedTagNumber(x uint8) bool {
-	return ((x & 0xF0) == 0xF0)
-}
-
-/* from clause 20.2.1.3.2 Constructed Data */
-/* true if the tag is an opening tag */
-func isOpeningTag(x uint8) bool {
-	return ((x & 0x07) == 6)
-}
-
-/* from clause 20.2.1.3.2 Constructed Data */
-/* true if the tag is a closing tag */
-func isClosingTag(x uint8) bool {
-	return ((x & 0x07) == 7)
 }
 
 func (d *Decoder) enumerated(len int) uint32 {
@@ -237,15 +220,4 @@ func (d *Decoder) unsigned(length int) uint32 {
 	default:
 		return 0
 	}
-}
-
-const contextSpecificBit = 0x08
-
-// context specific flag is the third bit
-func isContextSpecific(meta uint8) bool {
-	return ((meta & contextSpecificBit) > 0)
-}
-
-func setContextSpecific(x uint8) uint8 {
-	return (x | contextSpecificBit)
 }
