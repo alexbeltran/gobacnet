@@ -34,6 +34,8 @@ package encoding
 import (
 	"bytes"
 	"encoding/binary"
+
+	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
 var encodingEndian binary.ByteOrder = binary.BigEndian
@@ -66,7 +68,7 @@ func (e *Encoder) write(p interface{}) {
 	e.err = binary.Write(e.buff, encodingEndian, p)
 }
 
-func (e *Encoder) readProperty(invokeID uint8, data ReadPropertyData) {
+func (e *Encoder) readProperty(invokeID uint8, data bactype.ReadPropertyData) {
 	e.write(pduTypeConfirmedServiceRequest)
 	e.write(encodeMaxSegsMaxApdu(0, maxApdu))
 	e.write(invokeID)

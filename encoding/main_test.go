@@ -31,7 +31,11 @@ License.
 
 package encoding
 
-import "testing"
+import (
+	"testing"
+
+	bactype "github.com/alexbeltran/gobacnet/types"
+)
 
 func TestNPDU(t *testing.T) {
 	n := encodeNPDU(false, Normal)
@@ -118,7 +122,7 @@ func compare(t *testing.T, name string, a uint, b uint) {
 	}
 }
 
-func subTestReadProperty(t *testing.T, rd ReadPropertyData) {
+func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
 	e := NewEncoder()
 	e.readProperty(10, rd)
 	if err := e.Error(); err != nil {
@@ -143,7 +147,7 @@ func subTestReadProperty(t *testing.T, rd ReadPropertyData) {
 	compare(t, "array index", uint(rd.ArrayIndex), uint(outRd.ArrayIndex))
 }
 func TestReadProperty(t *testing.T) {
-	rd := ReadPropertyData{
+	rd := bactype.ReadPropertyData{
 		ObjectType:     37,
 		ObjectInstance: 1000,
 		ObjectProperty: 3921,

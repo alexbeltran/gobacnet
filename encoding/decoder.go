@@ -35,6 +35,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
+	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
 // Decoder used
@@ -62,7 +64,7 @@ func (d *Decoder) decode(data interface{}) {
 	d.err = binary.Read(d.buff, encodingEndian, data)
 }
 
-func (d *Decoder) readProperty() (data ReadPropertyData, err error) {
+func (d *Decoder) readProperty() (data bactype.ReadPropertyData, err error) {
 	// tag counter should be incremented every time a tag is read. this is important
 	// to make sure that the correct order is read.
 	var tagCounter uint8
