@@ -42,4 +42,9 @@ const (
 	size32 = 4
 )
 
+const (
+	flag16bit uint8 = 254
+	flag32bit uint8 = 255
+)
+
 const ArrayAll = 0xFFFFFFFF

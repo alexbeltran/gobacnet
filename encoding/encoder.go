@@ -97,15 +97,12 @@ func (e *Encoder) contextObjectID(tagNum uint8, objectType uint16, instance uint
 }
 
 func (e *Encoder) tag(tagNum uint8, contextSpecific bool, lenValueType uint32) {
-	var t uint8 = 0
+	var t uint8
 	if contextSpecific {
 		t = setContextSpecific(t)
 	}
 
-	// I have no idea why this is here.
 	if lenValueType <= 4 {
-		// TODO: I typecasted this here, but I am not too sure if this is correct
-		// since the original code used a 32 bit ORed to a 8 bit array
 		t |= uint8(lenValueType)
 	} else {
 		t |= 5
@@ -127,10 +124,10 @@ func (e *Encoder) tag(tagNum uint8, contextSpecific bool, lenValueType uint32) {
 		if lenValueType <= 253 {
 			e.write(uint8(lenValueType))
 		} else if lenValueType <= 65535 {
-			e.write(254)
+			e.write(flag16bit)
 			e.write(uint16(lenValueType))
 		} else {
-			e.write(255)
+			e.write(flag32bit)
 			e.write(lenValueType)
 		}
 	}
