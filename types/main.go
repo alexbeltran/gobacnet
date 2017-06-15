@@ -29,7 +29,7 @@ based on this file might be covered by the GNU General Public
 License.
 */
 
-package encoding
+package types
 
 type ReadPropertyData struct {
 	ObjectType         uint16
