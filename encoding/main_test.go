@@ -41,10 +41,6 @@ func TestNPDU(t *testing.T) {
 	}
 }
 
-func TestReadProperty(t *testing.T) {
-
-}
-
 func TestSegsApduEncode(t *testing.T) {
 	// Test is structured as parameter 1, parameter 2, output
 	tests := [][]int{
@@ -122,14 +118,8 @@ func compare(t *testing.T, name string, a uint, b uint) {
 	}
 }
 
-func TestReadingProperty(t *testing.T) {
+func subTestReadProperty(t *testing.T, rd ReadPropertyData) {
 	e := NewEncoder()
-	rd := ReadPropertyData{
-		ObjectType:     37,
-		ObjectInstance: 1000,
-		ObjectProperty: 3921,
-		ArrayIndex:     0,
-	}
 	e.readProperty(10, rd)
 	if err := e.Error(); err != nil {
 		t.Fatal(err)
@@ -141,7 +131,7 @@ func TestReadingProperty(t *testing.T) {
 	// Read Property reads 4 extra fields that are not original encoded. Need to
 	//find out where these 4 fields come from
 	d.buff.Read(make([]uint8, 4))
-	err, outRd := d.readProperty()
+	outRd, err := d.readProperty()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -151,4 +141,82 @@ func TestReadingProperty(t *testing.T) {
 	compare(t, "boject type", uint(rd.ObjectType), uint(outRd.ObjectType))
 	compare(t, "object property", uint(rd.ObjectProperty), uint(outRd.ObjectProperty))
 	compare(t, "array index", uint(rd.ArrayIndex), uint(outRd.ArrayIndex))
+}
+func TestReadProperty(t *testing.T) {
+	rd := ReadPropertyData{
+		ObjectType:     37,
+		ObjectInstance: 1000,
+		ObjectProperty: 3921,
+		ArrayIndex:     ArrayAll,
+	}
+	// Test a generic read property
+	subTestReadProperty(t, rd)
+
+	// Test with an array value given
+	rd.ArrayIndex = 1
+	subTestReadProperty(t, rd)
+}
+
+// Test for when the read property is too small and error handling
+func TestReadPropertyTooSmall(t *testing.T) {
+	e := NewEncoder()
+	var garbage uint16 = 100
+	e.write(garbage)
+	d := NewDecoder(e.Bytes())
+	_, err := d.readProperty()
+	if err == nil {
+		t.Fatal("Missed too small error")
+	}
+}
+
+// Test for mismatch id error.
+func TestReadPropertyMismatch(t *testing.T) {
+	e := NewEncoder()
+	var incorrectTag uint8 = 100
+	var randomValue uint32 = 4
+
+	// Has to be written 4 times at least since a minimum of 7 data is required
+	// for read property
+	for i := 0; i < 7; i++ {
+		e.tag(incorrectTag, true, randomValue)
+	}
+	d := NewDecoder(e.Bytes())
+	_, err := d.readProperty()
+	if err == nil {
+		t.Fatal("Incorrect tag number was allowed to pass")
+	}
+}
+
+func TestTag(t *testing.T) {
+	e := NewEncoder()
+	// Respective to each other
+	inTag := []uint8{4, 15, 30, 254, 1}
+	inValue := []uint32{4, 20, 6000, 1, 70000}
+
+	for i, tag := range inTag {
+		e.tag(tag, true, inValue[i])
+	}
+
+	// Check for errors during the encoding processes
+	if err := e.Error(); err != nil {
+		t.Fatal(err)
+	}
+
+	b := e.Bytes()
+	d := NewDecoder(b)
+	for i, tag := range inTag {
+		outTag, value := d.tagNumberAndValue()
+		if tag != outTag {
+			t.Fatalf("Test[%d]: Tag was not processed propertly. Expected %d, got %d", i, tag, outTag)
+		}
+
+		if value != inValue[i] {
+			t.Fatalf("Test[%d]: Value was not processed propertly. Expected %d, got %d", i, inValue[i], value)
+		}
+	}
+
+	// Check for errors during the decoding process
+	if err := d.Error(); err != nil {
+		t.Fatal(err)
+	}
 }
