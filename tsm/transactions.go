@@ -34,8 +34,11 @@ package tsm
 import "fmt"
 
 const freeID = 0
+
+// MaxTransaction is the default maximium number of transactions that can occur
+// concurrently
 const MaxTransaction = 255
-const InvalidID = 0
+const invalidID = 0
 
 const (
 	idle = iota
@@ -47,9 +50,10 @@ type state struct {
 	requestTimer int
 }
 
+// TSM is a structure
 type TSM struct {
-	States []state
-	Size   int
+	states []state
+	size   int
 	currID int
 	count  int
 }
@@ -57,8 +61,8 @@ type TSM struct {
 // New creates a new transaction manager
 func New(size int) *TSM {
 	t := TSM{}
-	t.Size = size
-	t.States = make([]state, size)
+	t.size = size
+	t.states = make([]state, size)
 	t.currID = 1
 
 	return &t
@@ -66,11 +70,12 @@ func New(size int) *TSM {
 
 func (t *TSM) incrCursor() {
 	t.currID++
-	if t.currID == InvalidID {
+	if t.currID == invalidID {
 		t.currID++
 	}
 }
 
+// GetFree returns the invoke id that was used to save the state of this connection.
 func (t *TSM) GetFree() (int, error) {
 	id, err := t.GetFreeID()
 	if err != nil {
@@ -81,9 +86,9 @@ func (t *TSM) GetFree() (int, error) {
 		return id, err
 	}
 
-	t.States[indx].id = id
-	t.States[indx].state = idle
-	t.States[indx].requestTimer = 0 // TODO: apdu_timeout
+	t.states[indx].id = id
+	t.states[indx].state = idle
+	t.states[indx].requestTimer = 0 // TODO: apdu_timeout
 	t.count = t.count + 1
 
 	return id, nil
@@ -93,14 +98,14 @@ func (t *TSM) GetFree() (int, error) {
 // is returned
 func (t *TSM) GetFreeID() (int, error) {
 	if !t.Available() {
-		return InvalidID, fmt.Errorf("there are no available ids")
+		return invalidID, fmt.Errorf("there are no available ids")
 	}
 	found := false
 	for !found {
 		index := t.Find(t.currID)
 
 		// The cursor id is being used, we will skip it
-		if index != len(t.States) {
+		if index != len(t.states) {
 			t.incrCursor()
 			continue
 
@@ -112,30 +117,30 @@ func (t *TSM) GetFreeID() (int, error) {
 		}
 	}
 
-	return InvalidID, fmt.Errorf("there are no avialable ids")
+	return invalidID, fmt.Errorf("there are no avialable ids")
 }
 
 // getFreeIndex returns the first position in the array that is not being used.
 func (t *TSM) getFreeIndex() (int, error) {
-	for i, s := range t.States {
-		if s.id == InvalidID {
+	for i, s := range t.states {
+		if s.id == invalidID {
 			return i, nil
 		}
 	}
-	return len(t.States), fmt.Errorf("the buffer is full")
+	return len(t.states), fmt.Errorf("the buffer is full")
 }
 
 // Find returns the index where the invoke id has occured.
 func (t *TSM) Find(id int) int {
-	for i, s := range t.States {
+	for i, s := range t.states {
 		if s.id == id {
 			return i
 		}
 	}
-	return len(t.States)
+	return len(t.states)
 }
 
-// Avaiable returns true if we can invoke a new id.
+// Available returns true if we can invoke a new id.
 func (t *TSM) Available() (status bool) {
-	return t.count < len(t.States)
+	return t.count < len(t.states)
 }
