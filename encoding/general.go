@@ -45,10 +45,6 @@ func valueLength(value uint32) int {
 	return size32
 }
 
-func isExtendedTagNumber(x uint8) bool {
-	return ((x & 0xF0) == 0xF0)
-}
-
 /* from clause 20.2.1.3.2 Constructed Data */
 /* true if the tag is an opening tag */
 func isOpeningTag(x uint8) bool {
@@ -61,17 +57,51 @@ func isClosingTag(x uint8) bool {
 	return ((x & 0x07) == 7)
 }
 
+type tagMeta uint8
+
+const tagMask tagMeta = 7
+const openingMask tagMeta = 7
+const closingMask tagMeta = openingMask
+
+const openingBits tagMeta = 6
+const closingBits tagMeta = 7
+const extendValueBits tagMeta = 5
+
 const contextSpecificBit = 0x08
 
-// context specific flag is the third bit
-func isContextSpecific(meta uint8) bool {
-	return ((meta & contextSpecificBit) > 0)
+func (t *tagMeta) setClosing() {
+	t.setContextSpecific()
+	*t = *t | tagMeta(closingMask)
 }
 
-func setContextSpecific(x uint8) uint8 {
-	return (x | contextSpecificBit)
+func (t *tagMeta) isClosing() bool {
+	return ((*t & closingMask) == closingBits)
 }
 
-func isExtendedValue(x uint8) bool {
-	return (x & 0x07) == 5
+func (t *tagMeta) setOpening() {
+	t.setContextSpecific()
+	*t = *t | tagMeta(openingMask)
+}
+
+func (t *tagMeta) isOpening() bool {
+	return ((*t & openingMask) == closingMask)
+}
+
+func (t *tagMeta) Clear() {
+	*t = 0
+}
+
+func (t *tagMeta) setContextSpecific() {
+	*t = *t | contextSpecificBit
+}
+
+func (t *tagMeta) isContextSpecific() bool {
+	return ((*t & contextSpecificBit) > 0)
+}
+
+func (t *tagMeta) isExtendedValue() bool {
+	return (*t & tagMask) == extendValueBits
+}
+func (t *tagMeta) isExtendedTagNumber() bool {
+	return ((*t & 0xF0) == 0xF0)
 }

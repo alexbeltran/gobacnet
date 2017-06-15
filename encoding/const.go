@@ -35,6 +35,8 @@ const MaxInstance = 0x3FFFFF
 const InstanceBits = 22
 const MaxPropertyID = 4194303
 
+const initialTagPos = 0
+
 const (
 	size8  = 1
 	size16 = 2

@@ -41,14 +41,19 @@ import (
 
 // Decoder used
 type Decoder struct {
-	buff *bytes.Buffer
-	err  error
+	buff       *bytes.Buffer
+	err        error
+	tagCounter int
 }
 
+func (d *Decoder) len() int {
+	return d.buff.Len()
+}
 func NewDecoder(b []byte) *Decoder {
 	return &Decoder{
 		bytes.NewBuffer(b),
 		nil,
+		0,
 	}
 }
 
@@ -64,20 +69,17 @@ func (d *Decoder) decode(data interface{}) {
 	d.err = binary.Read(d.buff, encodingEndian, data)
 }
 
-func (d *Decoder) readProperty() (data bactype.ReadPropertyData, err error) {
-	// tag counter should be incremented every time a tag is read. this is important
-	// to make sure that the correct order is read.
-	var tagCounter uint8
-
-	// Tag checker checks the passed tag and increments the tag counter
-	tagCheck := func(inTag uint8) error {
-		if tagCounter != inTag {
-			return fmt.Errorf("Mismatch in tag id. Tag ID should be %d but is %d", tagCounter, inTag)
-		}
-		tagCounter++
-		return nil
+func (d *Decoder) tagCheck(inTag uint8) {
+	if d.tagCounter != int(inTag) {
+		d.err = fmt.Errorf("Mismatch in tag id. Tag ID should be %d but is %d", d.tagCounter, inTag)
 	}
+}
 
+func (d *Decoder) tagIncr() {
+	d.tagCounter++
+}
+
+func (d *Decoder) ReadProperty() (data bactype.ReadPropertyData, err error) {
 	// Must have at least 7 bytes
 	if d.buff.Len() < 7 {
 		err = fmt.Errorf("Missing parameters")
@@ -86,23 +88,21 @@ func (d *Decoder) readProperty() (data bactype.ReadPropertyData, err error) {
 
 	// Tag 0: Object ID
 	tag, meta := d.tagNumber()
+	d.tagCheck(tag)
+	d.tagIncr()
 
-	if !isContextSpecific(meta) {
+	if !meta.isContextSpecific() {
 		err = fmt.Errorf("Tag %d should be context specific. %x", tag, meta)
-		return
-	}
-
-	if err = tagCheck(tag); err != nil {
 		return
 	}
 
 	objectType, instance := d.objectId()
 
 	// Tag 1: Property ID
-	tag, lenValue := d.tagNumberAndValue()
-	if err = tagCheck(tag); err != nil {
-		return
-	}
+	tag, _, lenValue := d.tagNumberAndValue()
+	d.tagCheck(tag)
+	d.tagIncr()
+
 	property := d.enumerated(int(lenValue))
 
 	var arrIndex uint32
@@ -112,18 +112,29 @@ func (d *Decoder) readProperty() (data bactype.ReadPropertyData, err error) {
 		// arra length
 
 		// Tag 2: Array Length (OPTIONAL)
-		tag, lenValue = d.tagNumberAndValue()
-		if err = tagCheck(tag); err != nil {
-			return
+		tag, meta, lenValue = d.tagNumberAndValue()
+
+		var openTag uint8
+		// I tried to not use magic numbers but it doesn't look like it can be avoid
+		// If the attag we receive is a tag of 2 then set the value
+		if tag == 2 {
+			arrIndex = d.unsigned(int(lenValue))
+			if d.len() > 0 {
+				openTag, meta = d.tagNumber()
+			}
+		} else {
+			openTag = tag
+			arrIndex = ArrayAll
 		}
-		arrIndex = d.unsigned(int(lenValue))
+
+		if openTag == 3 && meta.isOpening() {
+			// We subtract one to ignore the closing tag.
+			data.ApplicationDataLen = d.buff.Len() - 1
+			data.ApplicationData = make([]byte, d.buff.Len()-1)
+			d.decode(data.ApplicationData)
+		}
 	} else {
 		arrIndex = ArrayAll
-	}
-
-	if d.buff.Len() > 0 {
-		err = fmt.Errorf("there are too man arguments included in passed buffer")
-		return
 	}
 
 	// We now assemble all the values that we have read above
@@ -131,6 +142,8 @@ func (d *Decoder) readProperty() (data bactype.ReadPropertyData, err error) {
 	data.ObjectType = objectType
 	data.ObjectProperty = property
 	data.ArrayIndex = arrIndex
+
+	err = d.Error()
 	return
 }
 
@@ -139,43 +152,43 @@ func (d *Decoder) readProperty() (data bactype.ReadPropertyData, err error) {
 // Returns both a tag and additional meta data stored in this byte. If it is of
 // extended type, then that means that the entire first byte is metadata, else
 // the firrst 4 bytes store the tag
-func (d *Decoder) tagNumber() (tag uint8, meta uint8) {
+func (d *Decoder) tagNumber() (tag uint8, meta tagMeta) {
 	// Read the first value
 	d.decode(&meta)
-	if isExtendedTagNumber(meta) {
+	if meta.isExtendedTagNumber() {
 		d.decode(&tag)
 		return tag, meta
 	}
-	return meta >> 4, meta
+	return uint8(meta) >> 4, meta
 }
 
-func (d *Decoder) tagNumberAndValue() (tag uint8, value uint32) {
-	tag, meta := d.tagNumber()
-	if isExtendedValue(meta) {
+func (d *Decoder) tagNumberAndValue() (tag uint8, meta tagMeta, value uint32) {
+	tag, meta = d.tagNumber()
+	if meta.isExtendedValue() {
 		var val uint8
 		d.decode(&val)
 		// Tagged as an uint32
 		if val == flag32bit {
 			var parse uint32
 			d.decode(&parse)
-			return tag, parse
+			return tag, meta, parse
 
 			// Tagged as a uint16
 		} else if val == flag16bit {
 			var parse uint16
 			d.decode(&parse)
-			return tag, uint32(parse)
+			return tag, meta, uint32(parse)
 
 			// No tag, it must be a uint8
 		} else {
-			return tag, uint32(val)
+			return tag, meta, uint32(val)
 		}
-	} else if isOpeningTag(meta) || isClosingTag(meta) {
-		return tag, 0
+	} else if meta.isOpening() || meta.isClosing() {
+		return tag, meta, 0
 	}
 	// It must be a non extended/small value
 	// Note this is a mask of the last 3 bits
-	return tag, uint32(meta & 0x07)
+	return tag, meta, uint32(meta & 0x07)
 }
 
 func (d *Decoder) objectId() (objectType uint16, instance uint32) {

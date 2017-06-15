@@ -47,7 +47,6 @@ const LifeSafety MessagePriority = 3
 type ConfirmedService uint8
 
 const ReadPropertyService ConfirmedService = 12
-const pduTypeConfirmedServiceRequest uint8 = 0
 
 const NetworkMessageInvalid = 0xFF
 

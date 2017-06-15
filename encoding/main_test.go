@@ -118,13 +118,27 @@ const compareErrFmt = "Mismatch in %s when decoding values. Expected: %d, reciev
 func compare(t *testing.T, name string, a uint, b uint) {
 	// See if the initial read property data matches the output read property
 	if a != b {
-		t.Fatal(compareErrFmt, name, a, b)
+		t.Fatalf(compareErrFmt, name, a, b)
+	}
+}
+
+func compareReadProperties(t *testing.T, rd bactype.ReadPropertyData, outRd bactype.ReadPropertyData) {
+	// See if the initial read property data matches the output read property
+	compare(t, "object instance", uint(rd.ObjectInstance), uint(outRd.ObjectInstance))
+	compare(t, "boject type", uint(rd.ObjectType), uint(outRd.ObjectType))
+	compare(t, "object property", uint(rd.ObjectProperty), uint(outRd.ObjectProperty))
+	compare(t, "array index", uint(rd.ArrayIndex), uint(outRd.ArrayIndex))
+	compare(t, "application data length", uint(len(rd.ApplicationData)), uint(len(outRd.ApplicationData)))
+	if len(rd.ApplicationData) > 0 {
+		for i, _ := range rd.ApplicationData {
+			compare(t, "application data", uint(rd.ApplicationData[i]), uint(outRd.ApplicationData[i]))
+		}
 	}
 }
 
 func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
 	e := NewEncoder()
-	e.readProperty(10, rd)
+	e.ReadProperty(10, rd)
 	if err := e.Error(); err != nil {
 		t.Fatal(err)
 	}
@@ -135,17 +149,47 @@ func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
 	// Read Property reads 4 extra fields that are not original encoded. Need to
 	//find out where these 4 fields come from
 	d.buff.Read(make([]uint8, 4))
-	outRd, err := d.readProperty()
+	outRd, err := d.ReadProperty()
 	if err != nil {
 		t.Fatal(err)
 	}
-
-	// See if the initial read property data matches the output read property
-	compare(t, "object instance", uint(rd.ObjectInstance), uint(outRd.ObjectInstance))
-	compare(t, "boject type", uint(rd.ObjectType), uint(outRd.ObjectType))
-	compare(t, "object property", uint(rd.ObjectProperty), uint(outRd.ObjectProperty))
-	compare(t, "array index", uint(rd.ArrayIndex), uint(outRd.ArrayIndex))
+	compareReadProperties(t, rd, outRd)
 }
+
+func subTestReadPropertyAck(t *testing.T, rd bactype.ReadPropertyData) {
+	e := NewEncoder()
+	e.ReadPropertyAck(10, rd)
+	if err := e.Error(); err != nil {
+		t.Fatal(err)
+	}
+
+	b := e.Bytes()
+	d := NewDecoder(b)
+
+	// Read Property reads 4 extra fields that are not original encoded. Need to
+	//find out where these 4 fields come from
+	d.buff.Read(make([]uint8, 3))
+	outRd, err := d.ReadProperty()
+	if err != nil {
+		t.Fatal(err)
+	}
+	compareReadProperties(t, rd, outRd)
+}
+
+func TestReadAckProperty(t *testing.T) {
+	rd := bactype.ReadPropertyData{
+		ObjectType:      37,
+		ObjectInstance:  1000,
+		ObjectProperty:  3921,
+		ArrayIndex:      ArrayAll,
+		ApplicationData: []byte{3, 7, 23, 5, 11},
+	}
+	subTestReadPropertyAck(t, rd)
+
+	rd.ArrayIndex = 2
+	subTestReadPropertyAck(t, rd)
+}
+
 func TestReadProperty(t *testing.T) {
 	rd := bactype.ReadPropertyData{
 		ObjectType:     37,
@@ -167,7 +211,7 @@ func TestReadPropertyTooSmall(t *testing.T) {
 	var garbage uint16 = 100
 	e.write(garbage)
 	d := NewDecoder(e.Bytes())
-	_, err := d.readProperty()
+	_, err := d.ReadProperty()
 	if err == nil {
 		t.Fatal("Missed too small error")
 	}
@@ -185,7 +229,7 @@ func TestReadPropertyMismatch(t *testing.T) {
 		e.tag(incorrectTag, true, randomValue)
 	}
 	d := NewDecoder(e.Bytes())
-	_, err := d.readProperty()
+	_, err := d.ReadProperty()
 	if err == nil {
 		t.Fatal("Incorrect tag number was allowed to pass")
 	}
@@ -209,7 +253,7 @@ func TestTag(t *testing.T) {
 	b := e.Bytes()
 	d := NewDecoder(b)
 	for i, tag := range inTag {
-		outTag, value := d.tagNumberAndValue()
+		outTag, _, value := d.tagNumberAndValue()
 		if tag != outTag {
 			t.Fatalf("Test[%d]: Tag was not processed propertly. Expected %d, got %d", i, tag, outTag)
 		}
@@ -222,5 +266,32 @@ func TestTag(t *testing.T) {
 	// Check for errors during the decoding process
 	if err := d.Error(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestTagMetadata(t *testing.T) {
+	var m tagMeta = 0
+	m.setClosing()
+	if !m.isClosing() {
+		t.Fatal("Closing flag was not properly set.")
+	}
+	m.Clear()
+	if m.isClosing() {
+		t.Fatal("Flag was not cleared")
+	}
+
+	m.setOpening()
+	if !m.isOpening() {
+		t.Fatal("Opening flag was not properly set")
+	}
+
+	m.Clear()
+
+	if m.isContextSpecific() {
+		t.Fatal("Context specific was set when it shouldn't have been")
+	}
+	m.setContextSpecific()
+	if !m.isContextSpecific() {
+		t.Fatal("Context specific was not properly set.")
 	}
 }

@@ -68,28 +68,57 @@ func (e *Encoder) write(p interface{}) {
 	e.err = binary.Write(e.buff, encodingEndian, p)
 }
 
-func (e *Encoder) readProperty(invokeID uint8, data bactype.ReadPropertyData) {
-	e.write(pduTypeConfirmedServiceRequest)
+func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData) uint8 {
+	// Tag - Object Type and Instance
+	if data.ObjectType < MaxObject {
+		e.contextObjectID(tagPos, data.ObjectType, data.ObjectInstance)
+	}
+	tagPos++
+
+	// Tag - Object Property
+	if data.ObjectProperty < MaxPropertyID {
+		e.contextEnumerated(tagPos, data.ObjectProperty)
+	}
+	tagPos++
+
+	// Optional Tag - Array Index
+	if data.ArrayIndex != ArrayAll {
+		e.contextUnsigned(tagPos, data.ArrayIndex)
+	}
+	tagPos++
+	return tagPos
+}
+
+// ReadProperty is a service request to read a property that is passed.
+func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) {
+	// PDU Type
+	e.write(confirmedServiceRequest)
 	e.write(encodeMaxSegsMaxApdu(0, maxApdu))
 	e.write(invokeID)
 	e.write(ReadPropertyService)
-
-	var tagCounter uint8 = 0
-	if data.ObjectType < MaxObject {
-		e.contextObjectID(tagCounter, data.ObjectType, data.ObjectInstance)
-		tagCounter++
-	}
-
-	if data.ObjectProperty < MaxPropertyID {
-		e.contextEnumerated(tagCounter, data.ObjectProperty)
-		tagCounter++
-	}
-
-	if data.ArrayIndex != ArrayAll {
-		e.contextUnsigned(tagCounter, data.ArrayIndex)
-		tagCounter++
-	}
+	e.readPropertyHeader(initialTagPos, data)
 	return
+}
+
+func (e *Encoder) serviceConfirmed(in serviceConfirmed) {
+	e.write(in)
+}
+
+// ReadPropertyAck is the response made to a ReadProperty service request.
+func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData) {
+	// PDU Type
+	e.write(complexAck)
+	e.write(invokeID)
+	e.serviceConfirmed(serviceConfirmedReadProperty)
+
+	tagID := e.readPropertyHeader(initialTagPos, data)
+
+	e.openingTag(tagID)
+	tagID++
+	for _, d := range data.ApplicationData {
+		e.write(d)
+	}
+	e.closingTag(tagID)
 }
 
 func (e *Encoder) contextObjectID(tagNum uint8, objectType uint16, instance uint32) {
@@ -98,10 +127,40 @@ func (e *Encoder) contextObjectID(tagNum uint8, objectType uint16, instance uint
 	e.objectId(objectType, instance)
 }
 
+// Write opening tag to the system
+func (e *Encoder) openingTag(num uint8) {
+	var meta tagMeta
+	meta.setOpening()
+	e.tagNum(meta, num)
+}
+
+func (e *Encoder) closingTag(num uint8) {
+	var meta tagMeta
+	meta.setClosing()
+	e.tagNum(meta, num)
+}
+
+// pretags
+func (e *Encoder) tagNum(meta tagMeta, num uint8) {
+	t := uint8(meta)
+	if num <= 14 {
+		t |= (num << 4)
+		e.write(t)
+
+		// We don't have enough space so make it in a new byte
+	} else {
+		t |= 0xF0
+		e.write(t)
+		e.write(num)
+	}
+}
+
 func (e *Encoder) tag(tagNum uint8, contextSpecific bool, lenValueType uint32) {
 	var t uint8
 	if contextSpecific {
-		t = setContextSpecific(t)
+		var meta tagMeta
+		meta.setContextSpecific()
+		t = uint8(meta)
 	}
 
 	if lenValueType <= 4 {
