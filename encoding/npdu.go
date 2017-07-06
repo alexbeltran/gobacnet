@@ -34,6 +34,8 @@ package encoding
 import (
 	"bytes"
 	"encoding/binary"
+
+	"github.com/alexbeltran/gobacnet/types"
 )
 
 type MessagePriority uint8
@@ -64,16 +66,8 @@ type npdu struct {
 	HopCount            uint8
 }
 
-type BacnetAddress struct {
-	Net    uint16
-	Len    uint8
-	MacLen uint8
-	Mac    []uint8
-	Adr    []uint8
-}
-
 // buff, dest, my addr
-func EncodePDU(n *npdu, src *BacnetAddress, dest *BacnetAddress) (b []byte, err error) {
+func EncodePDU(n *npdu, src *types.Address, dest *types.Address) (b []byte, err error) {
 	buff := new(bytes.Buffer)
 
 	// write is a helper function to prevent a ton of "if err != nil" lines and
@@ -86,7 +80,7 @@ func EncodePDU(n *npdu, src *BacnetAddress, dest *BacnetAddress) (b []byte, err 
 	}
 
 	// Writes the bacnet address to the buffer
-	writeAddr := func(a *BacnetAddress) {
+	writeAddr := func(a *types.Address) {
 		// Encode destination
 		write(a.Net)
 		write(a.Len)

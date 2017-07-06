@@ -39,7 +39,7 @@ import (
 
 func TestNPDU(t *testing.T) {
 	n := encodeNPDU(false, Normal)
-	_, err := EncodePDU(&n, &BacnetAddress{}, &BacnetAddress{})
+	_, err := EncodePDU(&n, &bactype.Address{}, &bactype.Address{})
 	if err != nil {
 		t.Fatal(err)
 	}

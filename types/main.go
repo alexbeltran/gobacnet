@@ -41,3 +41,38 @@ type ReadPropertyData struct {
 	ErrorClass         uint8
 	ErrorCode          uint8
 }
+
+type Address struct {
+	Net    uint16
+	Len    uint8
+	MacLen uint8
+	Mac    []uint8
+	Adr    []uint8
+}
+
+const broadcastNetwork uint16 = 0xFFFF
+
+// IsBroadcast returns if the address is a broadcast address
+func (a *Address) IsBroadcast() bool {
+	if a.Net == broadcastNetwork || a.MacLen == 0 {
+		return true
+	}
+	return false
+}
+
+// IsSubBroadcast checks to see if packet is meant to be a network
+// specific broadcast
+func (a *Address) IsSubBroadcast() bool {
+	if a.Net > 0 && a.Len == 0 {
+		return true
+	}
+	return false
+}
+
+// IsUnicast checks to see if packet is meant to be a unicast
+func (a *Address) IsUnicast() bool {
+	if a.MacLen == 6 {
+		return true
+	}
+	return false
+}
