@@ -67,8 +67,8 @@ func TestGetBroadcast(t *testing.T) {
 		t.Fatal(err)
 	}
 	correct := "192.168.23.255"
-	if s != correct {
-		t.Fatalf("%s is incorrect. It should be %s", s, correct)
+	if s.String() != correct {
+		t.Fatalf("%s is incorrect. It should be %s", s.String(), correct)
 	}
 }
 

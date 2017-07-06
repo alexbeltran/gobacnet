@@ -43,18 +43,22 @@ const DefaultStateSize = 20
 type Client struct {
 	Interface        *net.Interface
 	MyAddress        string
-	BroadcastAddress string
+	BroadcastAddress net.IP
 	Port             uint16
 	tsm              *tsm.TSM
 }
 
 // getBroadcast uses the given address with subnet to return the broadcast address
-func getBroadcast(addr string) (string, error) {
+func getBroadcast(addr string) (net.IP, error) {
 	_, ipnet, err := net.ParseCIDR(addr)
 	if err != nil {
-		return "", err
+		return net.IP{}, err
 	}
-	return ipnet.String(), nil
+	broadcast := net.IP(make([]byte, 4))
+	for i := range broadcast {
+		broadcast[i] = ipnet.IP[i] | ^ipnet.Mask[i]
+	}
+	return broadcast, nil
 }
 
 func NewClient(inter string) (*Client, error) {
