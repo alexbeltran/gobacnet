@@ -32,7 +32,6 @@ License.
 package gobacnet
 
 import (
-	"fmt"
 	"testing"
 )
 
@@ -67,9 +66,10 @@ func TestGetBroadcast(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	fmt.Println(s)
-	// Output:
-	// 192.168.23.255
+	correct := "192.168.23.255"
+	if s != correct {
+		t.Fatalf("%s is incorrect. It should be %s", s, correct)
+	}
 }
 
 func TestWhoIs(t *testing.T) {
