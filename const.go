@@ -29,7 +29,7 @@ based on this file might be covered by the GNU General Public
 License.
 */
 
-package gobacnet
+package gobacnet 
 
 // defaultIPPort that BacnetIP will use. (little endian)
 const defaultIPPort = 0xC0BA
