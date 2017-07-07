@@ -44,7 +44,7 @@ type Client struct {
 	Interface        *net.Interface
 	MyAddress        string
 	BroadcastAddress net.IP
-	Port             uint16
+	Port             int
 	tsm              *tsm.TSM
 }
 

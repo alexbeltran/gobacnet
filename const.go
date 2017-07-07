@@ -29,7 +29,7 @@ based on this file might be covered by the GNU General Public
 License.
 */
 
-package gobacnet 
+package gobacnet
 
 // defaultIPPort that BacnetIP will use. (little endian)
 const defaultIPPort = 0xC0BA
@@ -42,3 +42,14 @@ const defaultMTSPMAC = 127
 // General Bacnet
 const defaultMaxMaster = 127
 const defautlMaxInfoFrames = 1
+
+// Data Transfer
+const typeBacnetIp = 0x81
+
+// Bacnet Fuction
+type bacFunc byte
+
+const (
+	bacFuncUnicast   bacFunc = 10
+	bacFuncBroadcast bacFunc = 11
+)

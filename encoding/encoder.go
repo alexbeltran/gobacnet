@@ -38,7 +38,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-var encodingEndian binary.ByteOrder = binary.BigEndian
+var EncodingEndian binary.ByteOrder = binary.BigEndian
 
 type Encoder struct {
 	buff *bytes.Buffer
@@ -65,7 +65,7 @@ func (e *Encoder) write(p interface{}) {
 	if e.err != nil {
 		return
 	}
-	e.err = binary.Write(e.buff, encodingEndian, p)
+	e.err = binary.Write(e.buff, EncodingEndian, p)
 }
 
 func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData) uint8 {

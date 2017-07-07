@@ -31,6 +31,8 @@ License.
 
 package types
 
+import "net"
+
 type ReadPropertyData struct {
 	ObjectType         uint16
 	ObjectInstance     uint32
@@ -75,4 +77,13 @@ func (a *Address) IsUnicast() bool {
 		return true
 	}
 	return false
+}
+
+// UDPAddr parses the mac address and returns an proper net.UDPAddr
+func (a *Address) UDPAddr() net.UDPAddr {
+	port := int(a.Mac[5])<<8 | int(a.Mac[6])
+	return net.UDPAddr{
+		IP:   a.Mac[0:4],
+		Port: port,
+	}
 }
