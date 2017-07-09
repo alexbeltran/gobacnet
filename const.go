@@ -50,6 +50,11 @@ const typeBacnetIp = 0x81
 type bacFunc byte
 
 const (
-	bacFuncUnicast   bacFunc = 10
-	bacFuncBroadcast bacFunc = 11
+	bacFuncResult                          bacFunc = 0
+	bacFuncWriteBroadcastDistributionTable bacFunc = 1
+	bacFuncBroadcastDistributionTable      bacFunc = 2
+	bacFuncBroadcastDistributionTableAck   bacfunc = 3
+	bacFuncForwardedNPDU                   bacFunc = 4
+	bacFuncUnicast                         bacFunc = 10
+	bacFuncBroadcast                       bacFunc = 11
 )
