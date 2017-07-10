@@ -91,11 +91,15 @@ func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData
 
 // ReadProperty is a service request to read a property that is passed.
 func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) {
+
+	// TODO: REMOVE THIS PLACE HOLDER VALUE
+	maxApdu := 50
+
 	// PDU Type
 	e.write(confirmedServiceRequest)
 	e.write(encodeMaxSegsMaxApdu(0, maxApdu))
 	e.write(invokeID)
-	e.write(ReadPropertyService)
+	e.write(serviceConfirmedReadProperty)
 	e.readPropertyHeader(initialTagPos, data)
 	return
 }

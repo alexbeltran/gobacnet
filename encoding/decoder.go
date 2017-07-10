@@ -66,7 +66,7 @@ func (d *Decoder) decode(data interface{}) {
 	if d.err != nil {
 		return
 	}
-	d.err = binary.Read(d.buff, encodingEndian, data)
+	d.err = binary.Read(d.buff, EncodingEndian, data)
 }
 
 func (d *Decoder) tagCheck(inTag uint8) {

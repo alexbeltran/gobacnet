@@ -32,112 +32,108 @@ License.
 package encoding
 
 import (
-	"bytes"
-	"encoding/binary"
-
-	"github.com/alexbeltran/gobacnet/types"
+	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-type MessagePriority uint8
+// NPDU encodes the network layer control message
+func (e *Encoder) NPDU(n bactype.NPDU) {
+	e.write(n.Version)
 
-const maxApdu = 50
-const Normal MessagePriority = 0
-const Urgent MessagePriority = 1
-const Critical MessagePriority = 2
-const LifeSafety MessagePriority = 3
+	// Prepare metadata into the second byte
+	meta := NPDUMetadata(0)
+	meta.SetNetworkLayerMessage(n.IsNetworkLayerMessage)
+	meta.SetExpectingReply(n.ExpectingReply)
+	meta.SetPriority(n.Priority)
 
-type ConfirmedService uint8
+	// Check to see if we have a net address. If so set destination true
+	if n.Destination != nil {
+		if n.Destination.Net != 0 {
+			meta.SetDestination(true)
+		}
+	}
 
-const ReadPropertyService ConfirmedService = 12
+	// Repeat for source
+	if n.Source != nil {
+		if n.Source.Net != 0 {
+			meta.SetSource(true)
+		}
+	}
+	e.write(meta)
 
-const NetworkMessageInvalid = 0xFF
+	if meta.HasDestination() {
+		e.write(n.Destination.Net)
 
-const BacnetProtocolVersion = 1
-const HopCountDefault = 255
+		// Address
+		e.write(n.Destination.Len)
+		e.write(n.Destination.Adr)
+	}
 
-// Network Protocol Data Units
-type npdu struct {
-	ExpectingReply      bool
-	ProtocolVersion     uint8
-	NetworkLayerMessage bool
-	NetworkMessageType  uint8
-	VendorID            uint16
-	Priority            MessagePriority
-	HopCount            uint8
+	if meta.HasSource() {
+		e.write(n.Source.Net)
+
+		// Address
+		e.write(n.Source.Len)
+		e.write(n.Source.Adr)
+	}
+
+	// Hop count is after source
+	if meta.HasDestination() {
+		e.write(n.HopCount)
+	}
+
+	if meta.IsNetworkLayerMessage() {
+		e.write(n.NetworkLayerMessageType)
+
+		// If the network value is above 0x80, then it should have a vendor id
+		if n.NetworkLayerMessageType >= 0x80 {
+			e.write(n.VendorId)
+		}
+	}
 }
 
-// buff, dest, my addr
-func EncodePDU(n *npdu, src *types.Address, dest *types.Address) (b []byte, err error) {
-	buff := new(bytes.Buffer)
+func (d *Decoder) Address(a *bactype.Address) {
+	d.decode(&a.Net)
+	d.decode(&a.Len)
 
-	// write is a helper function to prevent a ton of "if err != nil" lines and
-	// also to ensure that Endian is consistent through out the write process
-	write := func(p interface{}) {
-		if err != nil {
-			return
-		}
-		err = binary.Write(buff, binary.LittleEndian, p)
-	}
-
-	// Writes the bacnet address to the buffer
-	writeAddr := func(a *types.Address) {
-		// Encode destination
-		write(a.Net)
-		write(a.Len)
-		for _, a := range a.Adr {
-			write(a)
-		}
-	}
-
-	write(n.ProtocolVersion)
-	// Several portions of information goes into the next bit
-	var temp uint8 = 0
-	if n.NetworkLayerMessage {
-		temp |= 1 << 7
-	}
-	// Bit 6: Reserved
-	if dest.Net > 0 {
-		temp |= 1 << 5
-	}
-	// Bit 4: Reserved
-	if src.Net > 0 && src.Len > 0 {
-		temp |= 1 << 3
-	}
-
-	if n.ExpectingReply {
-		temp |= 1 << 2
-	}
-
-	temp |= uint8(n.Priority) & 0x03
-	write(temp)
-
-	writeAddr(dest)
-	writeAddr(src)
-
-	if dest.Net > 0 {
-		write(n.HopCount)
-	}
-
-	if n.NetworkLayerMessage {
-		write(n.NetworkMessageType)
-		if n.NetworkMessageType >= 0x80 {
-			write(n.VendorID)
-		}
-	}
-
-	return buff.Bytes(), err
+	// Make space for address
+	a.Adr = make([]uint8, a.Len)
+	d.decode(a.Adr)
 }
 
-func encodeNPDU(expectingReply bool, priority MessagePriority) npdu {
-	return npdu{
-		ExpectingReply:      expectingReply,
-		ProtocolVersion:     BacnetProtocolVersion,
-		NetworkLayerMessage: false,
-		NetworkMessageType:  NetworkMessageInvalid,
-		VendorID:            0,
-		Priority:            priority,
-		HopCount:            HopCountDefault,
+// NPDU encodes the network layer control message
+func (d *Decoder) NPDU() (n bactype.NPDU, err error) {
+	d.decode(&n.Version)
+
+	// Prepare metadata into the second byte
+	meta := NPDUMetadata(0)
+	d.decode(&meta)
+	n.ExpectingReply = meta.ExpectingReply()
+	n.IsNetworkLayerMessage = meta.IsNetworkLayerMessage()
+	n.Priority = meta.Priority()
+
+	if meta.HasDestination() {
+		n.Destination = &bactype.Address{}
+		d.Address(n.Destination)
 	}
+
+	if meta.HasSource() {
+		n.Source = &bactype.Address{}
+		d.Address(n.Source)
+	}
+
+	if meta.HasDestination() {
+		d.decode(&n.HopCount)
+	} else {
+		n.HopCount = 0
+	}
+
+	if meta.IsNetworkLayerMessage() {
+		d.decode(&n.NetworkLayerMessageType)
+		if n.NetworkLayerMessageType > 0x80 {
+			d.decode(&n.VendorId)
+		}
+	}
+	return n, d.Error()
 }
 
 /* from clause 20.1.2.4 max-segments-accepted and clause 20.1.2.5 max-APDU-length-accepted
@@ -178,4 +174,76 @@ func encodeMaxSegsMaxApdu(maxSegs int, maxApdu int) uint8 {
 	}
 
 	return octet
+}
+
+// NPDUMetadata includes additional metadata about npdu message
+type NPDUMetadata byte
+
+const maskNetworkLayerMessage = 1 << 7
+const maskDestination = 1 << 5
+const maskSource = 1 << 3
+const maskExpectingReply = 1 << 2
+
+// General setter for the info bits using the mask
+func (meta *NPDUMetadata) setInfoMask(b bool, mask byte) {
+	if b {
+		*meta = *meta | NPDUMetadata(mask)
+	} else {
+		var m byte = 0xFF
+		m = m - mask
+		*meta = *meta & NPDUMetadata(m)
+	}
+}
+
+// CheckMask uses mask to check bit position
+func (meta *NPDUMetadata) checkMask(mask byte) bool {
+	return (*meta & NPDUMetadata(mask)) > 0
+
+}
+
+// IsNetworkLayerMessage returns true if it is a network layer message
+func (n *NPDUMetadata) IsNetworkLayerMessage() bool {
+	return n.checkMask(maskNetworkLayerMessage)
+}
+
+func (n *NPDUMetadata) SetNetworkLayerMessage(b bool) {
+	n.setInfoMask(b, maskNetworkLayerMessage)
+}
+
+// Priority returns priority
+func (n *NPDUMetadata) Priority() bactype.NPDUPriority {
+	// Encoded in bit 0 and 1
+	return bactype.NPDUPriority(byte(*n) & 3)
+}
+
+// SetPriority for NPDU
+func (n *NPDUMetadata) SetPriority(p bactype.NPDUPriority) {
+	// Clear the first two bits
+	//*n &= (0xF - 3)
+	*n |= NPDUMetadata(p)
+}
+
+func (n *NPDUMetadata) HasDestination() bool {
+	return n.checkMask(maskDestination)
+}
+
+func (n *NPDUMetadata) SetDestination(b bool) {
+	n.setInfoMask(b, maskDestination)
+}
+
+func (n *NPDUMetadata) HasSource() bool {
+	return n.checkMask(maskSource)
+}
+
+func (n *NPDUMetadata) SetSource(b bool) {
+	n.setInfoMask(b, maskSource)
+}
+
+// IsNetworkLayerMessage returns true if it is a network layer message
+func (n *NPDUMetadata) ExpectingReply() bool {
+	return n.checkMask(maskExpectingReply)
+}
+
+func (n *NPDUMetadata) SetExpectingReply(b bool) {
+	n.setInfoMask(b, maskExpectingReply)
 }

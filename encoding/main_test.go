@@ -32,17 +32,77 @@ License.
 package encoding
 
 import (
+	"reflect"
 	"testing"
 
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func TestNPDU(t *testing.T) {
-	n := encodeNPDU(false, Normal)
-	_, err := EncodePDU(&n, &bactype.Address{}, &bactype.Address{})
-	if err != nil {
-		t.Fatal(err)
+const compareErrFmt = "Mismatch in %s when decoding values. Expected: %d, received: %d"
+
+func compare(t *testing.T, name string, a uint, b uint) {
+	// See if the initial read property data matches the output read property
+	if a != b {
+		t.Fatalf(compareErrFmt, name, a, b)
 	}
+}
+
+func subTestNPDU(t *testing.T, n bactype.NPDU) func(t *testing.T) {
+	return func(t *testing.T) {
+		e := NewEncoder()
+		e.NPDU(n)
+		if err := e.Error(); err != nil {
+			t.Fatal(err)
+		}
+		b := e.Bytes()
+		d := NewDecoder(b)
+
+		out, err := d.NPDU()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		equal := reflect.DeepEqual(n, out)
+		if !equal {
+			t.Logf("Encoding/Decoding Failed: %v does not equal %v", n, out)
+			t.Fail()
+		}
+	}
+}
+func TestNPDU(t *testing.T) {
+	n := bactype.NPDU{
+		Version:               102,
+		IsNetworkLayerMessage: true,
+		ExpectingReply:        false,
+		Priority:              bactype.Urgent,
+	}
+	subTestNPDU(t, n)
+
+	n.NetworkLayerMessageType = 20
+	t.Run("Testing Message Type", subTestNPDU(t, n))
+
+	n.NetworkLayerMessageType = 0
+	n.IsNetworkLayerMessage = false
+	n.ExpectingReply = true
+	t.Run("Testing Expecting Reply", subTestNPDU(t, n))
+	subTestNPDU(t, n)
+
+	n.Destination = &bactype.Address{
+		Net: 314,
+		Adr: []uint8{91, 4, 5, 6},
+		Len: 4,
+	}
+	n.HopCount = 21
+	t.Run("Testing Destination Address", subTestNPDU(t, n))
+	subTestNPDU(t, n)
+
+	n.Source = &bactype.Address{
+		Net: 444,
+		Adr: []uint8{1, 9, 6, 10},
+		Len: 4,
+	}
+	t.Run("Testing Dest and Src Address", subTestNPDU(t, n))
+
 }
 
 func TestSegsApduEncode(t *testing.T) {
@@ -110,15 +170,6 @@ func TestEnumerated(t *testing.T) {
 	x := d.enumerated(1000)
 	if x != 0 {
 		t.Fatalf("For invalid lengths, the value 0 should be decoded. The value %d was decoded", x)
-	}
-}
-
-const compareErrFmt = "Mismatch in %s when decoding values. Expected: %d, recieved: %d"
-
-func compare(t *testing.T, name string, a uint, b uint) {
-	// See if the initial read property data matches the output read property
-	if a != b {
-		t.Fatalf(compareErrFmt, name, a, b)
 	}
 }
 
