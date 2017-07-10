@@ -38,6 +38,8 @@ func (c *Client) address(addr bactype.Address) (net.UDPAddr, error) {
 // Sets the udp version used to transfer data
 // See https://golang.org/pkg/net/#DialUDP
 const udpVersion = 'udp'
+const mtuHeaderLength = 4
+const forwardHeaderLength = 10
 
 // Send packet to destination
 func Send(dest bactype.Address, data []byte) error {
@@ -55,7 +57,7 @@ func Send(dest bactype.Address, data []byte) error {
 	}
 
 	// Write the length of the packet.
-	// We add 2 to include this encoded piece and.... (idk?)
+	// We add 2 to include this encoded 16 bit length
 	l := uint16(buff.Writebuff.Len() + len(data) + 2)
 	binary.Write(buff, encoding.EncodingEndian, l)
 
@@ -90,7 +92,7 @@ func Receive(b []byte, deadline time.Time)(length int, src *net.IP, err error){
 	defer conn.Close()
 
 	conn.SetReadDeadline(deadline)
-	length, src, err := conn.ReadFromUDP(b)
+	length, src, err = conn.ReadFromUDP(b)
 	if err != nil{
 		return
 	}
@@ -102,6 +104,23 @@ func Receive(b []byte, deadline time.Time)(length int, src *net.IP, err error){
 		return
 	}
 
-	
+	if src.Equal(conn.LocalAddr()){
+		// We accidentally got the packet back 
+		// It is not considered an error
+		length = 0
+		return
+	}
 
+	if function == bacFuncBroadcast || function == bacFuncUnicast{
+		// Remove the header information
+		b = b[mtuHeaderLength:]
+		length = length - mtuHeaderLength
+		return
+	}
+
+	if function == bacFuncForwardedNPDU {
+		b = b[forwardHeaderLength:]
+		length = length - forwardHeaderLength 
+		return
+	}
 }
