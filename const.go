@@ -53,7 +53,7 @@ const (
 	bacFuncResult                          bacFunc = 0
 	bacFuncWriteBroadcastDistributionTable bacFunc = 1
 	bacFuncBroadcastDistributionTable      bacFunc = 2
-	bacFuncBroadcastDistributionTableAck   bacfunc = 3
+	bacFuncBroadcastDistributionTableAck   bacFunc = 3
 	bacFuncForwardedNPDU                   bacFunc = 4
 	bacFuncUnicast                         bacFunc = 10
 	bacFuncBroadcast                       bacFunc = 11

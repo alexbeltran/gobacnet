@@ -37,13 +37,13 @@ func (c *Client) address(addr bactype.Address) (net.UDPAddr, error) {
 
 // Sets the udp version used to transfer data
 // See https://golang.org/pkg/net/#DialUDP
-const udpVersion = 'udp'
+const udpVersion = "udp"
 const mtuHeaderLength = 4
 const forwardHeaderLength = 10
 
 // Send packet to destination
-func Send(dest bactype.Address, data []byte) error {
-	buff := bytes.NewBuffer()
+func Send(dest bactype.Address, data []byte) (int, error) {
+	buff := new(bytes.Buffer)
 
 	// Set packet type
 	buff.WriteByte(typeBacnetIp)
@@ -58,22 +58,19 @@ func Send(dest bactype.Address, data []byte) error {
 
 	// Write the length of the packet.
 	// We add 2 to include this encoded 16 bit length
-	l := uint16(buff.Writebuff.Len() + len(data) + 2)
+	l := uint16(buff.Len() + len(data) + 2)
 	binary.Write(buff, encoding.EncodingEndian, l)
 
 	// Write main data
 	buff.Write(data)
 
 	// Get IP Address
-	d, err := dest.Address()
-	if err != nil {
-		return err
-	}
+	d := dest.UDPAddr()
 
 	// use default udp type, src = local address (nil)
-	conn, err := net.DialUDP("udp", nil, d)
+	conn, err := net.DialUDP("udp", nil, &d)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer conn.Close()
 	conn.SetWriteDeadline(time.Now().Add(time.Duration(10) * time.Second))
@@ -82,36 +79,38 @@ func Send(dest bactype.Address, data []byte) error {
 }
 
 // Receive
-func Receive(b []byte, deadline time.Time)(length int, src *net.IP, err error){
-	conn, err := net.ListenUdp("udp", net.UDPAddr{
+func Receive(b []byte, deadline time.Time) (length int, src *net.UDPAddr, err error) {
+	conn, err := net.ListenUDP("udp", &net.UDPAddr{
 		Port: defaultIPPort,
 	})
-	if err != nil{
-		return 
+	if err != nil {
+		return
 	}
 	defer conn.Close()
 
 	conn.SetReadDeadline(deadline)
 	length, src, err = conn.ReadFromUDP(b)
-	if err != nil{
+	if err != nil {
 		return
 	}
 
-	var function bacFunc 
+	var function bacFunc
 	buff := bytes.NewBuffer(b)
 	err = binary.Read(buff, encoding.EncodingEndian, function)
-	if err != nil{
+	if err != nil {
 		return
 	}
 
-	if src.Equal(conn.LocalAddr()){
-		// We accidentally got the packet back 
-		// It is not considered an error
-		length = 0
-		return
-	}
+	/*
+		if src.IP.Equal(net.ParseIP(conn.LocalAddr())) {
+			// We accidentally got the packet back
+			// It is not considered an error
+			length = 0
+			return
+		}
+	*/
 
-	if function == bacFuncBroadcast || function == bacFuncUnicast{
+	if function == bacFuncBroadcast || function == bacFuncUnicast {
 		// Remove the header information
 		b = b[mtuHeaderLength:]
 		length = length - mtuHeaderLength
@@ -120,7 +119,7 @@ func Receive(b []byte, deadline time.Time)(length int, src *net.IP, err error){
 
 	if function == bacFuncForwardedNPDU {
 		b = b[forwardHeaderLength:]
-		length = length - forwardHeaderLength 
-		return
+		length = length - forwardHeaderLength
 	}
+	return
 }
