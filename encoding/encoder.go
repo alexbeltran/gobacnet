@@ -91,15 +91,16 @@ func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData
 
 // ReadProperty is a service request to read a property that is passed.
 func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) {
-
-	// TODO: REMOVE THIS PLACE HOLDER VALUE
-	var maxApdu uint = 50
-
 	// PDU Type
-	e.write(confirmedServiceRequest)
-	e.write(encodeMaxSegsMaxApdu(0, maxApdu))
-	e.write(invokeID)
-	e.write(bactype.ServiceConfirmedReadProperty)
+	a := bactype.APDU{
+		DataType:         bactype.ConfirmedServiceRequest,
+		Service:          bactype.ServiceConfirmedReadProperty,
+		MaxSegs:          0,
+		MaxApdu:          MaxAPDU,
+		InvokeId:         invokeID,
+		SegmentedMessage: false,
+	}
+	e.APDU(a)
 	e.readPropertyHeader(initialTagPos, data)
 	return
 }
@@ -107,9 +108,14 @@ func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) {
 // ReadPropertyAck is the response made to a ReadProperty service request.
 func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData) {
 	// PDU Type
-	e.write(complexAck)
-	e.write(invokeID)
-	e.write(bactype.ServiceConfirmedReadProperty)
+	a := bactype.APDU{
+		DataType: bactype.ComplexAck,
+		Service:  bactype.ServiceConfirmedReadProperty,
+		MaxSegs:  0,
+		MaxApdu:  MaxAPDU,
+		InvokeId: invokeID,
+	}
+	e.APDU(a)
 
 	tagID := e.readPropertyHeader(initialTagPos, data)
 

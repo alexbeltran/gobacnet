@@ -247,9 +247,10 @@ func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
 	b := e.Bytes()
 	d := NewDecoder(b)
 
-	// Read Property reads 4 extra fields that are not original encoded. Need to
-	//find out where these 4 fields come from
-	d.buff.Read(make([]uint8, 4))
+	// Remove the apdu header
+	a := bactype.APDU{}
+	d.APDU(&a)
+
 	outRd, err := d.ReadProperty()
 	if err != nil {
 		t.Fatal(err)

@@ -49,6 +49,7 @@ const (
 
 // APDU - Application Protocol Data Unit
 type APDU struct {
+	DataType                  PDUType
 	SegmentedMessage          bool
 	MoreFollows               bool
 	SegmentedResponseAccepted bool
@@ -59,3 +60,12 @@ type APDU struct {
 	WindowNumber              uint8
 	Service                   ServiceConfirmed
 }
+
+// pduType encomposes all valid pdus.
+type PDUType uint8
+
+// pdu requests
+const (
+	ConfirmedServiceRequest PDUType = 0
+	ComplexAck              PDUType = 0x30
+)

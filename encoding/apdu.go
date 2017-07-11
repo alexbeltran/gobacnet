@@ -5,6 +5,12 @@ import (
 )
 
 func (e *Encoder) APDU(a bactype.APDU) {
+	e.write(a.DataType)
+	if a.DataType == bactype.ComplexAck {
+		e.apduCompledAck(a)
+		return
+	}
+
 	meta := APDUMetadata(0)
 	meta.setMoreFollows(a.MoreFollows)
 	meta.setSegmentedMessage(a.SegmentedMessage)
@@ -21,7 +27,18 @@ func (e *Encoder) APDU(a bactype.APDU) {
 	e.write(a.Service)
 }
 
+func (e *Encoder) apduCompledAck(a bactype.APDU) {
+	e.write(a.InvokeId)
+	e.write(a.Service)
+}
+
 func (d *Decoder) APDU(a *bactype.APDU) error {
+	d.decode(&a.DataType)
+	if a.DataType == bactype.ComplexAck {
+		d.decode(&a.InvokeId)
+		d.decode(&a.Service)
+		return d.Error()
+	}
 	var meta APDUMetadata
 	d.decode(&meta)
 	a.SegmentedMessage = meta.isSegmentedMessage()

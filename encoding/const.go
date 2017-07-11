@@ -35,6 +35,9 @@ const MaxInstance = 0x3FFFFF
 const InstanceBits = 22
 const MaxPropertyID = 4194303
 
+// MaxAPDU using bacnet over IP
+const MaxAPDU = 1476
+
 const initialTagPos = 0
 
 const (
@@ -47,15 +50,6 @@ const (
 const (
 	flag16bit uint8 = 254
 	flag32bit uint8 = 255
-)
-
-// pduType encomposes all valid pdus.
-type pduType uint8
-
-// pdu requests
-const (
-	confirmedServiceRequest pduType = 0
-	complexAck              pduType = 0x30
 )
 
 const ArrayAll = 0xFFFFFFFF
