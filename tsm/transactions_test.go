@@ -37,11 +37,17 @@ func TestTSM(t *testing.T) {
 	size := 3
 	tsm := New(size)
 	var err error
-	for i := 0; i < size; i++ {
+	for i := 0; i < size-1; i++ {
 		_, err = tsm.GetFree()
 		if err != nil {
+			t.Logf("Getting ID %d:", tsm.currID)
 			t.Fatal(err)
 		}
+	}
+
+	id, err := tsm.GetFree()
+	if err != nil {
+		t.Fatal(err)
 	}
 
 	// The buffer should be full at this point.
@@ -49,4 +55,17 @@ func TestTSM(t *testing.T) {
 	if err == nil {
 		t.Fatal("Buffer was full but an id was given ")
 	}
+
+	// Free an ID
+	err = tsm.FreeID(id)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Now we should be able to get a new id since we free id
+	_, err = tsm.GetFree()
+	if err != nil {
+		t.Fatal(err)
+	}
+
 }
