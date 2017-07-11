@@ -5,18 +5,18 @@ import (
 )
 
 func (e *Encoder) APDU(a bactype.APDU) {
-	e.write(a.DataType)
+	meta := APDUMetadata(0)
+	meta.setDataType(a.DataType)
+	meta.setMoreFollows(a.MoreFollows)
+	meta.setSegmentedMessage(a.SegmentedMessage)
+	meta.setSegmentedAccepted(a.SegmentedResponseAccepted)
+	e.write(meta)
+
 	if a.DataType == bactype.ComplexAck {
 		e.apduCompledAck(a)
 		return
 	}
 
-	meta := APDUMetadata(0)
-	meta.setMoreFollows(a.MoreFollows)
-	meta.setSegmentedMessage(a.SegmentedMessage)
-	meta.setSegmentedAccepted(a.SegmentedResponseAccepted)
-
-	e.write(meta)
 	e.maxSegsMaxApdu(a.MaxSegs, a.MaxApdu)
 	e.write(a.InvokeId)
 	if a.SegmentedMessage {
@@ -33,17 +33,18 @@ func (e *Encoder) apduCompledAck(a bactype.APDU) {
 }
 
 func (d *Decoder) APDU(a *bactype.APDU) error {
-	d.decode(&a.DataType)
-	if a.DataType == bactype.ComplexAck {
-		d.decode(&a.InvokeId)
-		d.decode(&a.Service)
-		return d.Error()
-	}
 	var meta APDUMetadata
 	d.decode(&meta)
 	a.SegmentedMessage = meta.isSegmentedMessage()
 	a.SegmentedResponseAccepted = meta.segmentedResponseAccepted()
 	a.MoreFollows = meta.moreFollows()
+	a.DataType = meta.DataType()
+
+	if a.DataType == bactype.ComplexAck {
+		d.decode(&a.InvokeId)
+		d.decode(&a.Service)
+		return d.Error()
+	}
 
 	a.MaxSegs, a.MaxApdu = d.maxSegsMaxApdu()
 
@@ -96,4 +97,13 @@ func (meta *APDUMetadata) setMoreFollows(b bool) {
 
 func (meta *APDUMetadata) setSegmentedAccepted(b bool) {
 	meta.setInfoMask(b, apduMaskSegmentedAccepted)
+}
+
+func (meta *APDUMetadata) setDataType(t bactype.PDUType) {
+	// clean the first 4 bits
+	*meta = (*meta & APDUMetadata(0xF0)) | APDUMetadata(t)
+}
+func (meta *APDUMetadata) DataType() bactype.PDUType {
+	// clean the first 4 bits
+	return bactype.PDUType(0xF0) & bactype.PDUType(*meta)
 }
