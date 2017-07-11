@@ -36,7 +36,8 @@ const InstanceBits = 22
 const MaxPropertyID = 4194303
 
 // MaxAPDU using bacnet over IP
-const MaxAPDU = 1476
+const MaxAPDUOverIP = 1476
+const MaxAPDU = MaxAPDUOverIP
 
 const initialTagPos = 0
 
