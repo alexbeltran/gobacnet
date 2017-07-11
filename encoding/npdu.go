@@ -136,46 +136,6 @@ func (d *Decoder) NPDU() (n bactype.NPDU, err error) {
 	return n, d.Error()
 }
 
-/* from clause 20.1.2.4 max-segments-accepted and clause 20.1.2.5 max-APDU-length-accepted
-returns the encoded octet */
-func encodeMaxSegsMaxApdu(maxSegs int, maxApdu int) uint8 {
-	var octet uint8 = 0
-
-	// 6 is chosen since 2^6 is 64 at which point we hit special cases
-	var i uint
-	for i = 0; i < 6; i++ {
-		if maxSegs < 1<<(i+1) {
-			octet = uint8(i << 4)
-			break
-		}
-	}
-	if maxSegs == 64 {
-		octet = 0x60
-	} else if maxSegs > 64 {
-		octet = 0x70
-	}
-
-	/* max_apdu must be 50 octets minimum */
-	if maxApdu <= 50 {
-		octet |= 0x00
-	} else if maxApdu <= 128 {
-		octet |= 0x01
-		/*fits in a LonTalk frame */
-	} else if maxApdu <= 206 {
-		octet |= 0x02
-		/*fits in an ARCNET or MS/TP frame */
-	} else if maxApdu <= 480 {
-		octet |= 0x03
-	} else if maxApdu <= 1024 {
-		octet |= 0x04
-		/* fits in an ISO 8802-3 frame */
-	} else if maxApdu <= 1476 {
-		octet |= 0x05
-	}
-
-	return octet
-}
-
 // NPDUMetadata includes additional metadata about npdu message
 type NPDUMetadata byte
 
@@ -186,13 +146,7 @@ const maskExpectingReply = 1 << 2
 
 // General setter for the info bits using the mask
 func (meta *NPDUMetadata) setInfoMask(b bool, mask byte) {
-	if b {
-		*meta = *meta | NPDUMetadata(mask)
-	} else {
-		var m byte = 0xFF
-		m = m - mask
-		*meta = *meta & NPDUMetadata(m)
-	}
+	*meta = NPDUMetadata(setInfoMask(byte(*meta), b, mask))
 }
 
 // CheckMask uses mask to check bit position

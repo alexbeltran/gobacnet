@@ -93,19 +93,15 @@ func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData
 func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) {
 
 	// TODO: REMOVE THIS PLACE HOLDER VALUE
-	maxApdu := 50
+	var maxApdu uint = 50
 
 	// PDU Type
 	e.write(confirmedServiceRequest)
 	e.write(encodeMaxSegsMaxApdu(0, maxApdu))
 	e.write(invokeID)
-	e.write(serviceConfirmedReadProperty)
+	e.write(bactype.ServiceConfirmedReadProperty)
 	e.readPropertyHeader(initialTagPos, data)
 	return
-}
-
-func (e *Encoder) serviceConfirmed(in serviceConfirmed) {
-	e.write(in)
 }
 
 // ReadPropertyAck is the response made to a ReadProperty service request.
@@ -113,7 +109,7 @@ func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData)
 	// PDU Type
 	e.write(complexAck)
 	e.write(invokeID)
-	e.serviceConfirmed(serviceConfirmedReadProperty)
+	e.write(bactype.ServiceConfirmedReadProperty)
 
 	tagID := e.readPropertyHeader(initialTagPos, data)
 

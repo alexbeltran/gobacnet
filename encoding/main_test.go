@@ -105,20 +105,70 @@ func TestNPDU(t *testing.T) {
 
 }
 
+func subTestAPDU(t *testing.T, a bactype.APDU) func(t *testing.T) {
+	return func(t *testing.T) {
+		e := NewEncoder()
+		e.APDU(a)
+		if err := e.Error(); err != nil {
+			t.Fatal(err)
+		}
+		b := e.Bytes()
+		d := NewDecoder(b)
+
+		var out bactype.APDU
+		err := d.APDU(&out)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		equal := reflect.DeepEqual(a, out)
+		if !equal {
+			t.Logf("Encoding/Decoding Failed: %v does not equal %v", a, out)
+			t.Fail()
+		}
+	}
+}
+
+func TestAPDU(t *testing.T) {
+	a := bactype.APDU{
+		SegmentedMessage:          false,
+		MoreFollows:               true,
+		SegmentedResponseAccepted: false,
+		MaxSegs:                   64,
+		MaxApdu:                   50,
+		InvokeId:                  62,
+		Service:                   bactype.ServiceConfirmedReadProperty,
+	}
+	t.Run("Generic APDU Test", subTestAPDU(t, a))
+
+	// Segmented message
+	a.SegmentedMessage = true
+	a.Sequence = 31
+	a.WindowNumber = 43
+	t.Run("Segmented Message Test", subTestAPDU(t, a))
+
+	a.MaxSegs = 65
+	t.Run("Special Max Segs case", subTestAPDU(t, a))
+
+	a.MaxApdu = 206
+	t.Run("Lon Works APDU case", subTestAPDU(t, a))
+
+}
+
 func TestSegsApduEncode(t *testing.T) {
 	// Test is structured as parameter 1, parameter 2, output
-	tests := [][]int{
-		[]int{0, 1, 0},
-		[]int{64, 60, 0x61},
-		[]int{80, 205, 0x72},
-		[]int{80, 405, 0x73},
-		[]int{80, 1005, 0x74},
-		[]int{3, 1035, 0x15},
-		[]int{9, 1035, 0x35},
+	tests := [][]uint{
+		[]uint{0, 1, 0},
+		[]uint{64, 60, 0x61},
+		[]uint{80, 205, 0x72},
+		[]uint{80, 405, 0x73},
+		[]uint{80, 1005, 0x74},
+		[]uint{3, 1035, 0x15},
+		[]uint{9, 1035, 0x35},
 	}
 
 	for _, test := range tests {
-		d := int(encodeMaxSegsMaxApdu(test[0], test[1]))
+		d := uint(encodeMaxSegsMaxApdu(test[0], test[1]))
 		if d != test[2] {
 			t.Fatalf("Input was Segments %d and Apdu %d: Expected %x got %x", test[0], test[1], test[2], d)
 		}
