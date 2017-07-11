@@ -59,6 +59,9 @@ type APDU struct {
 	Sequence                  uint8
 	WindowNumber              uint8
 	Service                   ServiceConfirmed
+
+	// This is the raw data passed based on the service
+	Data []byte
 }
 
 // pduType encomposes all valid pdus.

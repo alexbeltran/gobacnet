@@ -123,8 +123,7 @@ func subTestAPDU(t *testing.T, a bactype.APDU) func(t *testing.T) {
 
 		equal := reflect.DeepEqual(a, out)
 		if !equal {
-			t.Logf("Encoding/Decoding Failed: %v does not equal %v", a, out)
-			t.Fail()
+			t.Errorf("Encoding/Decoding Failed: %v does not equal %v", a, out)
 		}
 	}
 }
@@ -251,7 +250,9 @@ func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
 	a := bactype.APDU{}
 	d.APDU(&a)
 
-	outRd, err := d.ReadProperty()
+	serviceDecoder := NewDecoder(a.Data)
+
+	outRd, err := serviceDecoder.ReadProperty()
 	if err != nil {
 		t.Fatal(err)
 	}

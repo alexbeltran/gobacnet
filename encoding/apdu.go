@@ -53,7 +53,13 @@ func (d *Decoder) APDU(a *bactype.APDU) error {
 		d.decode(&a.Sequence)
 		d.decode(&a.WindowNumber)
 	}
+
 	d.decode(&a.Service)
+	if d.len() > 0 {
+		a.Data = make([]byte, d.len())
+		d.decode(&a.Data)
+	}
+
 	return d.Error()
 }
 
