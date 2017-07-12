@@ -32,6 +32,9 @@ package types
 
 type NPDUPriority byte
 
+const ProtocolVersion uint8 = 1
+const DefaultHopCount uint8 = 255
+
 const (
 	LifeSafety        NPDUPriority = 3
 	CriticalEquipment NPDUPriority = 2
