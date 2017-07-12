@@ -57,7 +57,8 @@ type state struct {
 	data         chan []byte
 }
 
-// TSM is a structure
+// TSM is the transaction state manager. It handles passing data to other
+// processes and keeping track of what transactions are currently processed
 type TSM struct {
 	states []state
 	size   int
@@ -81,9 +82,10 @@ func New(size int) *TSM {
 	return &t
 }
 
+// incrCursor moves the current possible id by one. It handles wrap around
 func (t *TSM) incrCursor() {
 	t.currID++
-	if t.currID == invalidID || t.currID > MaxTransaction {
+	if t.currID == invalidID || t.currID >= MaxTransaction {
 		t.currID = invalidID + 1
 	}
 }
@@ -96,13 +98,13 @@ func (t *TSM) Send(id int, b []byte) error {
 	if err != nil {
 		return err
 	}
-	log.Printf("Sending data to index:%d", i)
 	t.states[i].data <- b
-	log.Printf("Finish Sending data to index:%d", i)
 
 	return nil
 }
 
+// Receive attempts to receive a byte array from the invoked id. If a time out
+// period has passed then an error is returned
 func (t *TSM) Receive(id int, timeout time.Duration) ([]byte, error) {
 	t.mutex.Lock()
 	i, err := t.find(id)
@@ -149,6 +151,7 @@ func (t *TSM) GetFree() (int, error) {
 	return id, nil
 }
 
+// FreeID allows the id to be reused in the transaction manager
 func (t *TSM) FreeID(id int) error {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
@@ -199,7 +202,7 @@ func (t *TSM) getFreeIndex() (int, error) {
 	return len(t.states), fmt.Errorf("the buffer is full")
 }
 
-// Find returns the index where the invoke id has occured.
+// find returns the index where the invoke id has occurred.
 func (t *TSM) find(id int) (int, error) {
 	for i, s := range t.states {
 		if s.id == id {
