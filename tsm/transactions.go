@@ -77,7 +77,7 @@ func New(size int) *TSM {
 
 	// Initialize the channel pipeline
 	for i := range t.states {
-		t.states[i].data = make(chan []byte)
+		t.states[i].data = make(chan []byte, 1)
 	}
 	return &t
 }
