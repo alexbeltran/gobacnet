@@ -32,8 +32,11 @@ License.
 package tsm
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"sync"
+	"time"
 )
 
 const freeID = 0
@@ -51,6 +54,7 @@ type state struct {
 	id           int
 	state        int
 	requestTimer int
+	data         chan []byte
 }
 
 // TSM is a structure
@@ -70,6 +74,10 @@ func New(size int) *TSM {
 	t.currID = 1
 	t.mutex = &sync.Mutex{}
 
+	// Initialize the channel pipeline
+	for i := range t.states {
+		t.states[i].data = make(chan []byte)
+	}
 	return &t
 }
 
@@ -78,6 +86,45 @@ func (t *TSM) incrCursor() {
 	if t.currID == invalidID || t.currID > MaxTransaction {
 		t.currID = invalidID + 1
 	}
+}
+
+// Send data to invoked id
+func (t *TSM) Send(id int, b []byte) error {
+	t.mutex.Lock()
+	i, err := t.find(id)
+	t.mutex.Unlock()
+	if err != nil {
+		return err
+	}
+	log.Printf("Sending data to index:%d", i)
+	t.states[i].data <- b
+	log.Printf("Finish Sending data to index:%d", i)
+
+	return nil
+}
+
+func (t *TSM) Receive(id int, timeout time.Duration) ([]byte, error) {
+	t.mutex.Lock()
+	i, err := t.find(id)
+	t.mutex.Unlock()
+
+	if err != nil {
+		return nil, err
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	log.Printf("Receiving data from index:%d", i)
+
+	// Wait for data
+	select {
+	case b := <-t.states[i].data:
+		return b, nil
+	case <-ctx.Done():
+		return nil, fmt.Errorf("Receive timed out")
+	}
+
 }
 
 // GetFree returns the invoke id that was used to save the state of this connection.

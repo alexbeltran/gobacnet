@@ -31,7 +31,10 @@ License.
 
 package tsm
 
-import "testing"
+import (
+	"testing"
+	"time"
+)
 
 func TestTSM(t *testing.T) {
 	size := 3
@@ -68,4 +71,48 @@ func TestTSM(t *testing.T) {
 		t.Fatal(err)
 	}
 
+}
+
+func TestDataTransaction(t *testing.T) {
+	size := 2
+	tsm := New(size)
+	ids := make([]int, size)
+	var err error
+
+	for i := 0; i < size-1; i++ {
+		ids[i], err = tsm.GetFree()
+		if err != nil {
+			t.Logf("Getting ID %d:", tsm.currID)
+			t.Fatal(err)
+		}
+	}
+
+	go func() {
+		err = tsm.Send(ids[0], []byte("Hello First ID"))
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+
+	go func() {
+		err = tsm.Send(ids[1], []byte("Hello Second ID"))
+		if err != nil {
+			t.Error(err)
+		}
+	}()
+
+	go func() {
+		b, err := tsm.Receive(ids[0], time.Duration(5)*time.Second)
+		if err != nil {
+			t.Error(err)
+		}
+		t.Log(string(b))
+	}()
+
+	b, err := tsm.Receive(ids[1], time.Duration(5)*time.Second)
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Log(string(b))
 }
