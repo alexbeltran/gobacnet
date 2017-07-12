@@ -116,6 +116,51 @@ func (c *Client) Close() {
 	c.listener = nil
 }
 
+func (c *Client) handleMsg(b []byte) {
+	var header bactype.BVLC
+	var npdu bactype.NPDU
+	var apdu bactype.APDU
+
+	dec := encoding.NewDecoder(b)
+	err := dec.BVLC(&header)
+	if err != nil {
+		return
+	}
+
+	if header.Function == bactype.BacFuncBroadcast || header.Function == bactype.BacFuncUnicast {
+		// Remove the header information
+		b = b[mtuHeaderLength:]
+		err = dec.NPDU(&npdu)
+		if err != nil {
+			log.Print(err)
+			return
+		}
+
+		if npdu.IsNetworkLayerMessage {
+			log.Print("Network Layer Message Discarded")
+			return
+		}
+
+		// We want to keep the APDU intact so we will get a snapshot before decoding
+		// further
+		send := dec.Bytes()
+		err = dec.APDU(&apdu)
+		if err != nil {
+			log.Print(err)
+			return
+		}
+		c.tsm.Send(int(apdu.InvokeId), send)
+	}
+
+	if header.Function == bactype.BacFuncForwardedNPDU {
+		// Right now we are ignoring the NPDU data that is stored in the packet. Eventually
+		// we will need to check it for any additional information we can gleam.
+		// NDPU has source
+		b = b[forwardHeaderLength:]
+	}
+
+}
+
 // Receive
 func (c *Client) listen() {
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{
@@ -128,41 +173,14 @@ func (c *Client) listen() {
 	c.listener = conn
 	defer c.Close()
 
-	var b []byte
-	length, _, err := c.listener.ReadFromUDP(b)
-	if err != nil {
-		log.Print(err)
-	}
-
-	var header bactype.BVLC
-	dec := encoding.NewDecoder(b)
-	err = dec.BVLC(&header)
-	if err != nil {
-		return
-	}
-
-	/*
-		if src.IP.Equal(net.ParseIP(conn.LocalAddr())) {
-			// We accidentally got the packet back
-			// It is not considered an error
-			length = 0
-			return
+	for c.listener != nil {
+		var b []byte
+		_, _, err := c.listener.ReadFromUDP(b)
+		if err != nil {
+			log.Print(err)
+			continue
 		}
-	*/
-
-	if header.Function == bactype.BacFuncBroadcast || header.Function == bactype.BacFuncUnicast {
-		// Remove the header information
-		b = b[mtuHeaderLength:]
-		length = length - mtuHeaderLength
-		return
-	}
-
-	if header.Function == bactype.BacFuncForwardedNPDU {
-		// Right now we are ignoring the NPDU data that is stored in the packet. Eventually
-		// we will need to check it for any additional information we can gleam.
-		// NDPU has source
-		b = b[forwardHeaderLength:]
-		length = length - forwardHeaderLength
+		go c.handleMsg(b)
 	}
 	return
 }
