@@ -398,3 +398,30 @@ func TestTagMetadata(t *testing.T) {
 		t.Fatal("Context specific was not properly set.")
 	}
 }
+
+func TestBVLC(t *testing.T) {
+	bv := bactype.BVLC{
+		Type:     bactype.BVLCTypeBacnetIP,
+		Function: bactype.BacFuncBroadcast,
+		Length:   4,
+	}
+	e := NewEncoder()
+	e.BVLC(bv)
+	if err := e.Error(); err != nil {
+		t.Error(err)
+	}
+
+	d := NewDecoder(e.Bytes())
+	var out bactype.BVLC
+	d.BVLC(&out)
+
+	if err := d.Error(); err != nil {
+		t.Error(err)
+	}
+
+	equal := reflect.DeepEqual(bv, out)
+	if !equal {
+		t.Errorf("Encoding/Decoding Failed: %v does not equal %v", bv, out)
+	}
+
+}

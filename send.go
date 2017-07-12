@@ -1,8 +1,6 @@
 package gobacnet
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"log"
 	"net"
@@ -44,26 +42,25 @@ const forwardHeaderLength = 10
 
 // Send packet to destination
 func Send(dest bactype.Address, data []byte) (int, error) {
-	buff := new(bytes.Buffer)
+	var header bactype.BVLC
 
 	// Set packet type
-	buff.WriteByte(typeBacnetIp)
+	header.Type = bactype.BVLCTypeBacnetIP
 
 	if dest.IsBroadcast() || dest.IsSubBroadcast() {
 		// SET BROADCAST FLAG
-		buff.WriteByte(byte(bacFuncBroadcast))
+		header.Function = bactype.BacFuncBroadcast
 	} else {
 		// SET UNICAST FLAG
-		buff.WriteByte(byte(bacFuncUnicast))
+		header.Function = bactype.BacFuncUnicast
 	}
-
-	// Write the length of the packet.
-	// We add 2 to include this encoded 16 bit length
-	l := uint16(buff.Len() + len(data) + 2)
-	binary.Write(buff, encoding.EncodingEndian, l)
-
-	// Write main data
-	buff.Write(data)
+	header.Length = uint16(mtuHeaderLength + len(data))
+	header.Data = data
+	e := encoding.NewEncoder()
+	err := e.BVLC(header)
+	if err != nil {
+		return 0, err
+	}
 
 	// Get IP Address
 	d := dest.UDPAddr()
@@ -76,7 +73,7 @@ func Send(dest bactype.Address, data []byte) (int, error) {
 	defer conn.Close()
 	conn.SetWriteDeadline(time.Now().Add(time.Duration(10) * time.Second))
 
-	return conn.Write(buff.Bytes())
+	return conn.Write(e.Bytes())
 }
 
 //Close closes all inbound connections
@@ -107,9 +104,9 @@ func (c *Client) listen() {
 		log.Print(err)
 	}
 
-	var function bacFunc
-	buff := bytes.NewBuffer(b)
-	err = binary.Read(buff, encoding.EncodingEndian, function)
+	var header bactype.BVLC
+	dec := encoding.NewDecoder(b)
+	err = dec.BVLC(&header)
 	if err != nil {
 		return
 	}
@@ -123,14 +120,17 @@ func (c *Client) listen() {
 		}
 	*/
 
-	if function == bacFuncBroadcast || function == bacFuncUnicast {
+	if header.Function == bactype.BacFuncBroadcast || header.Function == bactype.BacFuncUnicast {
 		// Remove the header information
 		b = b[mtuHeaderLength:]
 		length = length - mtuHeaderLength
 		return
 	}
 
-	if function == bacFuncForwardedNPDU {
+	if header.Function == bactype.BacFuncForwardedNPDU {
+		// Right now we are ignoring the NPDU data that is stored in the packet. Eventually
+		// we will need to check it for any additional information we can gleam.
+		// NDPU has source
 		b = b[forwardHeaderLength:]
 		length = length - forwardHeaderLength
 	}

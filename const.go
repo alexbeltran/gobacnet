@@ -42,19 +42,3 @@ const defaultMTSPMAC = 127
 // General Bacnet
 const defaultMaxMaster = 127
 const defautlMaxInfoFrames = 1
-
-// Data Transfer
-const typeBacnetIp = 0x81
-
-// Bacnet Fuction
-type bacFunc byte
-
-const (
-	bacFuncResult                          bacFunc = 0
-	bacFuncWriteBroadcastDistributionTable bacFunc = 1
-	bacFuncBroadcastDistributionTable      bacFunc = 2
-	bacFuncBroadcastDistributionTableAck   bacFunc = 3
-	bacFuncForwardedNPDU                   bacFunc = 4
-	bacFuncUnicast                         bacFunc = 10
-	bacFuncBroadcast                       bacFunc = 11
-)
