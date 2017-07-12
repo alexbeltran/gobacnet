@@ -102,3 +102,8 @@ const (
 	ConfirmedServiceRequest PDUType = 0
 	ComplexAck              PDUType = 0x30
 )
+
+// IsConfirmedServiceRequest checks to see if the APDU is in the list of known services
+func (a *APDU) IsConfirmedServiceRequest() bool {
+	return (0xF0 & a.DataType) == ConfirmedServiceRequest
+}
