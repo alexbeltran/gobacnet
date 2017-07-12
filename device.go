@@ -46,6 +46,7 @@ type Client struct {
 	BroadcastAddress net.IP
 	Port             int
 	tsm              *tsm.TSM
+	listener         *net.UDPConn
 }
 
 // getBroadcast uses the given address with subnet to return the broadcast address

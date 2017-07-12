@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"log"
 	"net"
 	"time"
 
@@ -78,20 +79,32 @@ func Send(dest bactype.Address, data []byte) (int, error) {
 	return conn.Write(buff.Bytes())
 }
 
+//Close closes all inbound connections
+func (c *Client) Close() {
+	if c == nil {
+		return
+	}
+
+	c.Close()
+	c.listener = nil
+}
+
 // Receive
-func Receive(b []byte, deadline time.Time) (length int, src *net.UDPAddr, err error) {
+func (c *Client) listen() {
 	conn, err := net.ListenUDP("udp", &net.UDPAddr{
 		Port: defaultIPPort,
 	})
 	if err != nil {
 		return
 	}
-	defer conn.Close()
 
-	conn.SetReadDeadline(deadline)
-	length, src, err = conn.ReadFromUDP(b)
+	c.listener = conn
+	defer c.Close()
+
+	var b []byte
+	length, _, err := c.listener.ReadFromUDP(b)
 	if err != nil {
-		return
+		log.Print(err)
 	}
 
 	var function bacFunc
