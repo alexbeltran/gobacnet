@@ -61,6 +61,10 @@ func (d *Decoder) Error() error {
 	return d.err
 }
 
+func (d *Decoder) Bytes() []byte {
+	return d.buff.Bytes()
+}
+
 func (d *Decoder) decode(data interface{}) {
 	// Only decode if there have been no errors so far
 	if d.err != nil {

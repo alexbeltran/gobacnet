@@ -57,7 +57,8 @@ func subTestNPDU(t *testing.T, n bactype.NPDU) func(t *testing.T) {
 		b := e.Bytes()
 		d := NewDecoder(b)
 
-		out, err := d.NPDU()
+		var out bactype.NPDU
+		err := d.NPDU(&out)
 		if err != nil {
 			t.Fatal(err)
 		}

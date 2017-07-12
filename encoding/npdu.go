@@ -101,7 +101,7 @@ func (d *Decoder) Address(a *bactype.Address) {
 }
 
 // NPDU encodes the network layer control message
-func (d *Decoder) NPDU() (n bactype.NPDU, err error) {
+func (d *Decoder) NPDU(n *bactype.NPDU) error {
 	d.decode(&n.Version)
 
 	// Prepare metadata into the second byte
@@ -133,7 +133,7 @@ func (d *Decoder) NPDU() (n bactype.NPDU, err error) {
 			d.decode(&n.VendorId)
 		}
 	}
-	return n, d.Error()
+	return d.Error()
 }
 
 // NPDUMetadata includes additional metadata about npdu message
