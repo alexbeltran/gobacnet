@@ -253,7 +253,8 @@ func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
 
 	serviceDecoder := NewDecoder(a.Data)
 
-	outRd, err := serviceDecoder.ReadProperty()
+	var outRd bactype.ReadPropertyData
+	err := serviceDecoder.ReadProperty(&outRd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -273,7 +274,8 @@ func subTestReadPropertyAck(t *testing.T, rd bactype.ReadPropertyData) {
 	// Read Property reads 4 extra fields that are not original encoded. Need to
 	//find out where these 4 fields come from
 	d.buff.Read(make([]uint8, 3))
-	outRd, err := d.ReadProperty()
+	var outRd bactype.ReadPropertyData
+	err := d.ReadProperty(&outRd)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,7 +317,9 @@ func TestReadPropertyTooSmall(t *testing.T) {
 	var garbage uint16 = 100
 	e.write(garbage)
 	d := NewDecoder(e.Bytes())
-	_, err := d.ReadProperty()
+
+	var out bactype.ReadPropertyData
+	err := d.ReadProperty(&out)
 	if err == nil {
 		t.Fatal("Missed too small error")
 	}
@@ -333,7 +337,9 @@ func TestReadPropertyMismatch(t *testing.T) {
 		e.tag(incorrectTag, true, randomValue)
 	}
 	d := NewDecoder(e.Bytes())
-	_, err := d.ReadProperty()
+
+	var out bactype.ReadPropertyData
+	err := d.ReadProperty(&out)
 	if err == nil {
 		t.Fatal("Incorrect tag number was allowed to pass")
 	}

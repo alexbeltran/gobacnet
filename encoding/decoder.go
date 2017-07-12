@@ -83,11 +83,10 @@ func (d *Decoder) tagIncr() {
 	d.tagCounter++
 }
 
-func (d *Decoder) ReadProperty() (data bactype.ReadPropertyData, err error) {
+func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 	// Must have at least 7 bytes
 	if d.buff.Len() < 7 {
-		err = fmt.Errorf("Missing parameters")
-		return
+		return fmt.Errorf("Missing parameters")
 	}
 
 	// Tag 0: Object ID
@@ -96,8 +95,7 @@ func (d *Decoder) ReadProperty() (data bactype.ReadPropertyData, err error) {
 	d.tagIncr()
 
 	if !meta.isContextSpecific() {
-		err = fmt.Errorf("Tag %d should be context specific. %x", tag, meta)
-		return
+		return fmt.Errorf("Tag %d should be context specific. %x", tag, meta)
 	}
 
 	objectType, instance := d.objectId()
@@ -147,8 +145,7 @@ func (d *Decoder) ReadProperty() (data bactype.ReadPropertyData, err error) {
 	data.ObjectProperty = property
 	data.ArrayIndex = arrIndex
 
-	err = d.Error()
-	return
+	return d.Error()
 }
 
 // contexTag decoder

@@ -90,7 +90,7 @@ func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData
 }
 
 // ReadProperty is a service request to read a property that is passed.
-func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) {
+func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) error {
 	// PDU Type
 	a := bactype.APDU{
 		DataType:         bactype.ConfirmedServiceRequest,
@@ -102,7 +102,7 @@ func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) {
 	}
 	e.APDU(a)
 	e.readPropertyHeader(initialTagPos, data)
-	return
+	return e.Error()
 }
 
 // ReadPropertyAck is the response made to a ReadProperty service request.
