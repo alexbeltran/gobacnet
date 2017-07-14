@@ -31,7 +31,10 @@ License.
 
 package types
 
-import "net"
+import (
+	"fmt"
+	"net"
+)
 
 type ReadPropertyData struct {
 	ObjectType         uint16
@@ -80,10 +83,14 @@ func (a *Address) IsUnicast() bool {
 }
 
 // UDPAddr parses the mac address and returns an proper net.UDPAddr
-func (a *Address) UDPAddr() net.UDPAddr {
-	port := int(a.Mac[5])<<8 | int(a.Mac[6])
-	return net.UDPAddr{
-		IP:   a.Mac[0:4],
-		Port: port,
+func (a *Address) UDPAddr() (net.UDPAddr, error) {
+	if len(a.Mac) != 6 {
+		return net.UDPAddr{}, fmt.Errorf("Mac is too short at %d", len(a.Mac))
 	}
+	port := uint(a.Mac[4])<<8 | uint(a.Mac[5])
+	ip := net.IPv4(byte(a.Mac[0]), byte(a.Mac[1]), byte(a.Mac[2]), byte(a.Mac[3]))
+	return net.UDPAddr{
+		IP:   ip,
+		Port: int(port),
+	}, nil
 }
