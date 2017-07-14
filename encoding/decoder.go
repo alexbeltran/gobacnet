@@ -72,7 +72,6 @@ func (d *Decoder) decode(data interface{}) {
 	}
 	d.err = binary.Read(d.buff, EncodingEndian, data)
 }
-
 func (d *Decoder) tagCheck(inTag uint8) {
 	if d.tagCounter != int(inTag) {
 		d.err = fmt.Errorf("Mismatch in tag id. Tag ID should be %d but is %d", d.tagCounter, inTag)
@@ -83,6 +82,15 @@ func (d *Decoder) tagIncr() {
 	d.tagCounter++
 }
 
+type ErrorIncorrectTag struct {
+	Expected uint8
+	Given    uint8
+}
+
+func (e *ErrorIncorrectTag) Error() string {
+	return fmt.Sprintf("Incorrect tag %d, expected %d.", e.Given, e.Expected)
+}
+
 func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 	// Must have at least 7 bytes
 	if d.buff.Len() < 7 {
@@ -91,30 +99,43 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 
 	// Tag 0: Object ID
 	tag, meta := d.tagNumber()
-	d.tagCheck(tag)
-	d.tagIncr()
 
+	var expectedTag uint8
+	if tag != expectedTag {
+		return &ErrorIncorrectTag{expectedTag, tag}
+	}
+	expectedTag++
+
+	var objectType uint16
+	var instance uint32
+	var property uint32
 	if !meta.isContextSpecific() {
 		return fmt.Errorf("Tag %d should be context specific. %x", tag, meta)
 	}
-
-	objectType, instance := d.objectId()
+	objectType, instance = d.objectId()
 
 	// Tag 1: Property ID
-	tag, _, lenValue := d.tagNumberAndValue()
-	d.tagCheck(tag)
-	d.tagIncr()
+	tag, meta = d.tagNumber()
+	if tag != expectedTag {
+		return &ErrorIncorrectTag{expectedTag, tag}
+	}
+	expectedTag++
 
-	property := d.enumerated(int(lenValue))
+	lenValue := d.value(meta)
+	property = d.enumerated(int(lenValue))
+	if d.len() != 0 {
+		tag, meta = d.tagNumber()
+	}
 
 	var arrIndex uint32
 	// Check to see if we still have bytes to read.
-	if d.buff.Len() != 0 {
+	if d.buff.Len() != 0 || tag >= 2 {
 		// If we do then that means we are reading the optional argument,
 		// arra length
 
 		// Tag 2: Array Length (OPTIONAL)
-		tag, meta, lenValue = d.tagNumberAndValue()
+		var lenValue uint32
+		lenValue = d.value(meta)
 
 		var openTag uint8
 		// I tried to not use magic numbers but it doesn't look like it can be avoid
@@ -129,7 +150,7 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 			arrIndex = ArrayAll
 		}
 
-		if openTag == 3 && meta.isOpening() {
+		if openTag == 3 {
 			// We subtract one to ignore the closing tag.
 			data.ApplicationDataLen = d.buff.Len() - 1
 			data.ApplicationData = make([]byte, d.buff.Len()-1)
@@ -163,8 +184,7 @@ func (d *Decoder) tagNumber() (tag uint8, meta tagMeta) {
 	return uint8(meta) >> 4, meta
 }
 
-func (d *Decoder) tagNumberAndValue() (tag uint8, meta tagMeta, value uint32) {
-	tag, meta = d.tagNumber()
+func (d *Decoder) value(meta tagMeta) (value uint32) {
 	if meta.isExtendedValue() {
 		var val uint8
 		d.decode(&val)
@@ -172,24 +192,28 @@ func (d *Decoder) tagNumberAndValue() (tag uint8, meta tagMeta, value uint32) {
 		if val == flag32bit {
 			var parse uint32
 			d.decode(&parse)
-			return tag, meta, parse
+			return parse
 
 			// Tagged as a uint16
 		} else if val == flag16bit {
 			var parse uint16
 			d.decode(&parse)
-			return tag, meta, uint32(parse)
+			return uint32(parse)
 
 			// No tag, it must be a uint8
 		} else {
-			return tag, meta, uint32(val)
+			return uint32(val)
 		}
 	} else if meta.isOpening() || meta.isClosing() {
-		return tag, meta, 0
+		return 0
 	}
+	return uint32(meta & 0x07)
+}
+func (d *Decoder) tagNumberAndValue() (tag uint8, meta tagMeta, value uint32) {
+	tag, meta = d.tagNumber()
 	// It must be a non extended/small value
 	// Note this is a mask of the last 3 bits
-	return tag, meta, uint32(meta & 0x07)
+	return tag, meta, d.value(meta)
 }
 
 func (d *Decoder) objectId() (objectType uint16, instance uint32) {
