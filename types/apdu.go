@@ -30,7 +30,12 @@ License.
 */
 package types
 
+import "fmt"
+
 type ServiceConfirmed uint8
+
+const MaxAPDUOverIP = 1476
+const MaxAPDU = MaxAPDUOverIP
 
 const (
 	/* Alarm and Event Services */
@@ -106,4 +111,11 @@ const (
 // IsConfirmedServiceRequest checks to see if the APDU is in the list of known services
 func (a *APDU) IsConfirmedServiceRequest() bool {
 	return (0xF0 & a.DataType) == ConfirmedServiceRequest
+}
+
+func (s *ServiceConfirmed) String() string {
+	switch *s {
+	default:
+		return fmt.Sprintf("Unknown %d", uint(*s))
+	}
 }
