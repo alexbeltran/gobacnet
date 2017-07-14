@@ -34,7 +34,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"time"
 
 	"github.com/alexbeltran/gobacnet/encoding"
 	bactype "github.com/alexbeltran/gobacnet/types"
@@ -50,7 +49,7 @@ func (c *Client) address(addr bactype.Address) (net.UDPAddr, error) {
 	} else if addr.IsSubBroadcast() {
 		// Network specific
 		if addr.IsUnicast() {
-			return addr.UDPAddr(), nil
+			return addr.UDPAddr()
 		}
 
 		// Broadcast
@@ -59,7 +58,7 @@ func (c *Client) address(addr bactype.Address) (net.UDPAddr, error) {
 			Port: c.Port,
 		}, nil
 	} else if addr.IsUnicast() {
-		return addr.UDPAddr(), nil
+		return addr.UDPAddr()
 	}
 	return net.UDPAddr{}, fmt.Errorf("Unable to parse bacnet address")
 }
@@ -71,7 +70,7 @@ const mtuHeaderLength = 4
 const forwardHeaderLength = 10
 
 // Send packet to destination
-func Send(dest bactype.Address, data []byte) (int, error) {
+func (c *Client) Send(dest bactype.Address, data []byte) (int, error) {
 	var header bactype.BVLC
 
 	// Set packet type
@@ -93,26 +92,26 @@ func Send(dest bactype.Address, data []byte) (int, error) {
 	}
 
 	// Get IP Address
-	d := dest.UDPAddr()
-
-	// use default udp type, src = local address (nil)
-	conn, err := net.DialUDP("udp", nil, &d)
+	d, err := dest.UDPAddr()
 	if err != nil {
 		return 0, err
 	}
-	defer conn.Close()
-	conn.SetWriteDeadline(time.Now().Add(time.Duration(10) * time.Second))
 
-	return conn.Write(e.Bytes())
+	// use default udp type, src = local address (nil)
+	if err != nil {
+		return 0, err
+	}
+
+	return c.listener.WriteTo(e.Bytes(), &d)
 }
 
 //Close closes all inbound connections
 func (c *Client) Close() {
-	if c == nil {
+	if c.listener == nil {
 		return
 	}
 
-	c.Close()
+	c.listener.Close()
 	c.listener = nil
 }
 
@@ -124,20 +123,20 @@ func (c *Client) handleMsg(b []byte) {
 	dec := encoding.NewDecoder(b)
 	err := dec.BVLC(&header)
 	if err != nil {
+		log.Print(err)
 		return
 	}
 
-	if header.Function == bactype.BacFuncBroadcast || header.Function == bactype.BacFuncUnicast {
+	if header.Function == bactype.BacFuncBroadcast || header.Function == bactype.BacFuncUnicast || header.Function == bactype.BacFuncForwardedNPDU {
 		// Remove the header information
 		b = b[mtuHeaderLength:]
 		err = dec.NPDU(&npdu)
 		if err != nil {
-			log.Print(err)
 			return
 		}
 
 		if npdu.IsNetworkLayerMessage {
-			log.Print("Network Layer Message Discarded")
+			//log.Print("Network Layer Message Discarded")
 			return
 		}
 
@@ -149,7 +148,12 @@ func (c *Client) handleMsg(b []byte) {
 			log.Print(err)
 			return
 		}
-		c.tsm.Send(int(apdu.InvokeId), send)
+
+		err := c.tsm.Send(int(apdu.InvokeId), send)
+		// No invoke id found. That probably means it wasn't for us
+		if err != nil {
+			return
+		}
 	}
 
 	if header.Function == bactype.BacFuncForwardedNPDU {
@@ -162,25 +166,15 @@ func (c *Client) handleMsg(b []byte) {
 }
 
 // Receive
-func (c *Client) listen() {
-	conn, err := net.ListenUDP("udp", &net.UDPAddr{
-		Port: defaultIPPort,
-	})
-	if err != nil {
-		return
-	}
-
-	c.listener = conn
-	defer c.Close()
-
+func (c *Client) listen() error {
 	for c.listener != nil {
-		var b []byte
-		_, _, err := c.listener.ReadFromUDP(b)
+		b := make([]byte, 1024)
+		i, _, err := c.listener.ReadFrom(b)
 		if err != nil {
 			log.Print(err)
 			continue
 		}
-		go c.handleMsg(b)
+		go c.handleMsg(b[:i])
 	}
-	return
+	return nil
 }

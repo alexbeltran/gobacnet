@@ -31,15 +31,62 @@ License.
 
 package gobacnet
 
-import "log"
+import (
+	"fmt"
+	"log"
+	"time"
+
+	"github.com/alexbeltran/gobacnet/encoding"
+	bactype "github.com/alexbeltran/gobacnet/types"
+)
 
 func (c *Client) sendRequest() error {
 	id, err := c.tsm.GetFree()
 	if err != nil {
 		return err
 	}
-	// get my address?
-
 	log.Printf("id:%d", id)
 	return nil
+}
+
+func (c *Client) ReadProperty(dest *bactype.Address, rp bactype.ReadPropertyData) error {
+	id, err := c.tsm.GetFree()
+	if err != nil {
+		return err
+	}
+
+	enc := encoding.NewEncoder()
+	enc.NPDU(bactype.NPDU{
+		Version:               bactype.ProtocolVersion,
+		Destination:           dest,
+		IsNetworkLayerMessage: false,
+		ExpectingReply:        true,
+		Priority:              bactype.Normal,
+		HopCount:              bactype.DefaultHopCount,
+	})
+
+	enc.ReadProperty(uint8(id), rp)
+	if enc.Error() != nil {
+		return err
+	}
+
+	// the value filled doesn't matter. it just needs to be non nil
+	err = fmt.Errorf("go")
+	for count := 0; err != nil && count < 2; count++ {
+		var b []byte
+		_, err = c.Send(*dest, enc.Bytes())
+		if err != nil {
+			log.Print(err)
+			continue
+		}
+
+		b, err = c.tsm.Receive(id, time.Duration(5)*time.Second)
+		if err != nil {
+			continue
+		}
+		var out bactype.ReadPropertyData
+		dec := encoding.NewDecoder(b)
+		err = dec.ReadProperty(&out)
+	}
+	return err
 }

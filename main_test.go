@@ -32,18 +32,26 @@ License.
 package gobacnet
 
 import (
+	"encoding/json"
+	"log"
 	"testing"
+	"time"
+
+	bactype "github.com/alexbeltran/gobacnet/types"
 )
+
+const interfaceName = "eth1"
 
 // TestMain are general test
 func TestMain(t *testing.T) {
-	var err error
-	_, err = NewClient("wlp1s0")
+	c, err := NewClient(interfaceName)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer c.Close()
 
-	_, err = NewClient("pizzainterfacenotreal")
+	d, err := NewClient("pizzainterfacenotreal")
+	defer d.Close()
 	if err == nil {
 		t.Fatal("Successfully passed a false interface.")
 	}
@@ -73,9 +81,47 @@ func TestGetBroadcast(t *testing.T) {
 }
 
 func TestWhoIs(t *testing.T) {
-	c, err := NewClient("wlp1s0")
+	c, err := NewClient(interfaceName)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer c.Close()
 	c.sendRequest()
+}
+
+func TestReadPropertyService(t *testing.T) {
+	c, err := NewClient(interfaceName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Duration(1) * time.Second)
+
+	var mac []byte
+	var adr []byte
+	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
+	json.Unmarshal([]byte("\"HQ==\""), &adr)
+	dest := bactype.Address{
+		Net:    2428,
+		Len:    1,
+		MacLen: 6,
+		Mac:    mac,
+		Adr:    adr,
+	}
+	read := bactype.ReadPropertyData{
+		ObjectType:     0,
+		ObjectInstance: 1,
+		ObjectProperty: 85, // Present value
+		ArrayIndex:     0xFFFFFFFF,
+	}
+	err = c.ReadProperty(&dest, read)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+func TestMac(t *testing.T) {
+	var mac []byte
+	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
+	l := len(mac)
+	p := uint16(mac[l-1])<<8 | uint16(mac[l-1])
+	log.Printf("%d", p)
 }
