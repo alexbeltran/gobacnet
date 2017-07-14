@@ -34,7 +34,6 @@ package tsm
 import (
 	"context"
 	"fmt"
-	"log"
 	"sync"
 	"time"
 )
@@ -116,8 +115,6 @@ func (t *TSM) Receive(id int, timeout time.Duration) ([]byte, error) {
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
-
-	log.Printf("Receiving data from index:%d", i)
 
 	// Wait for data
 	select {
