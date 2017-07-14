@@ -32,7 +32,7 @@ License.
 package gobacnet
 
 // defaultIPPort that BacnetIP will use. (little endian)
-const defaultIPPort = 0xC0BA
+const defaultIPPort = 0xBAC0
 const defaultAPDUTimeout = 60000
 
 // MTSP
