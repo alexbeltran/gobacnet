@@ -34,8 +34,6 @@ package encoding
 import (
 	"bytes"
 	"encoding/binary"
-
-	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
 var EncodingEndian binary.ByteOrder = binary.BigEndian
@@ -66,65 +64,6 @@ func (e *Encoder) write(p interface{}) {
 		return
 	}
 	e.err = binary.Write(e.buff, EncodingEndian, p)
-}
-
-func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData) uint8 {
-	// Tag - Object Type and Instance
-	if data.ObjectType < MaxObject {
-		e.contextObjectID(tagPos, data.ObjectType, data.ObjectInstance)
-	}
-	tagPos++
-
-	// Tag - Object Property
-	if data.ObjectProperty < MaxPropertyID {
-		e.contextEnumerated(tagPos, data.ObjectProperty)
-	}
-	tagPos++
-
-	// Optional Tag - Array Index
-	if data.ArrayIndex != ArrayAll {
-		e.contextUnsigned(tagPos, data.ArrayIndex)
-	}
-	tagPos++
-	return tagPos
-}
-
-// ReadProperty is a service request to read a property that is passed.
-func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) error {
-	// PDU Type
-	a := bactype.APDU{
-		DataType:         bactype.ConfirmedServiceRequest,
-		Service:          bactype.ServiceConfirmedReadProperty,
-		MaxSegs:          0,
-		MaxApdu:          MaxAPDU,
-		InvokeId:         invokeID,
-		SegmentedMessage: false,
-	}
-	e.APDU(a)
-	e.readPropertyHeader(initialTagPos, data)
-	return e.Error()
-}
-
-// ReadPropertyAck is the response made to a ReadProperty service request.
-func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData) {
-	// PDU Type
-	a := bactype.APDU{
-		DataType: bactype.ComplexAck,
-		Service:  bactype.ServiceConfirmedReadProperty,
-		MaxSegs:  0,
-		MaxApdu:  MaxAPDU,
-		InvokeId: invokeID,
-	}
-	e.APDU(a)
-
-	tagID := e.readPropertyHeader(initialTagPos, data)
-
-	e.openingTag(tagID)
-	tagID++
-	for _, d := range data.ApplicationData {
-		e.write(d)
-	}
-	e.closingTag(tagID)
 }
 
 func (e *Encoder) contextObjectID(tagNum uint8, objectType uint16, instance uint32) {

@@ -35,8 +35,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-
-	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
 // Decoder used
@@ -89,84 +87,6 @@ type ErrorIncorrectTag struct {
 
 func (e *ErrorIncorrectTag) Error() string {
 	return fmt.Sprintf("Incorrect tag %d, expected %d.", e.Given, e.Expected)
-}
-
-func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
-	// Must have at least 7 bytes
-	if d.buff.Len() < 7 {
-		return fmt.Errorf("Missing parameters")
-	}
-
-	// Tag 0: Object ID
-	tag, meta := d.tagNumber()
-
-	var expectedTag uint8
-	if tag != expectedTag {
-		return &ErrorIncorrectTag{expectedTag, tag}
-	}
-	expectedTag++
-
-	var objectType uint16
-	var instance uint32
-	var property uint32
-	if !meta.isContextSpecific() {
-		return fmt.Errorf("Tag %d should be context specific. %x", tag, meta)
-	}
-	objectType, instance = d.objectId()
-
-	// Tag 1: Property ID
-	tag, meta = d.tagNumber()
-	if tag != expectedTag {
-		return &ErrorIncorrectTag{expectedTag, tag}
-	}
-	expectedTag++
-
-	lenValue := d.value(meta)
-	property = d.enumerated(int(lenValue))
-	if d.len() != 0 {
-		tag, meta = d.tagNumber()
-	}
-
-	var arrIndex uint32
-	// Check to see if we still have bytes to read.
-	if d.buff.Len() != 0 || tag >= 2 {
-		// If we do then that means we are reading the optional argument,
-		// arra length
-
-		// Tag 2: Array Length (OPTIONAL)
-		var lenValue uint32
-		lenValue = d.value(meta)
-
-		var openTag uint8
-		// I tried to not use magic numbers but it doesn't look like it can be avoid
-		// If the attag we receive is a tag of 2 then set the value
-		if tag == 2 {
-			arrIndex = d.unsigned(int(lenValue))
-			if d.len() > 0 {
-				openTag, meta = d.tagNumber()
-			}
-		} else {
-			openTag = tag
-			arrIndex = ArrayAll
-		}
-
-		if openTag == 3 {
-			// We subtract one to ignore the closing tag.
-			data.ApplicationDataLen = d.buff.Len() - 1
-			data.ApplicationData = make([]byte, d.buff.Len()-1)
-			d.decode(data.ApplicationData)
-		}
-	} else {
-		arrIndex = ArrayAll
-	}
-
-	// We now assemble all the values that we have read above
-	data.ObjectInstance = instance
-	data.ObjectType = objectType
-	data.ObjectProperty = property
-	data.ArrayIndex = arrIndex
-
-	return d.Error()
 }
 
 // contexTag decoder
