@@ -181,3 +181,37 @@ func (d *Decoder) unsigned(length int) uint32 {
 		return 0
 	}
 }
+
+func (d *Decoder) signed24() int32 {
+	var a, b, c int8
+	d.decode(&a)
+	d.decode(&b)
+	d.decode(&c)
+
+	var x int32
+	x = int32((int32(a) << 16) & 0x00ff0000)
+	x |= int32((int32(b) << 8) & 0x0000ff00)
+	x |= int32(int32(c) & 0x000000ff)
+	return x
+}
+
+func (d *Decoder) signed(length int) int32 {
+	switch length {
+	case size8:
+		var val int8
+		d.decode(&val)
+		return int32(val)
+	case size16:
+		var val int16
+		d.decode(&val)
+		return int32(val)
+	case size24:
+		return d.signed24()
+	case size32:
+		var val int32
+		d.decode(&val)
+		return val
+	default:
+		return 0
+	}
+}
