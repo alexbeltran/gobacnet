@@ -31,9 +31,7 @@ License.
 package encoding
 
 import (
-	"encoding/binary"
 	"encoding/json"
-	"log"
 	"testing"
 
 	bactype "github.com/alexbeltran/gobacnet/types"
@@ -109,12 +107,13 @@ func TestReadPropertyResponse(t *testing.T) {
 		t.Fatal(err)
 	}
 	apd := NewDecoder(rpd.ApplicationData)
-	tag, _, value := apd.tagNumberAndValue()
-	log.Printf("Tag:%d, Value:%d", tag, value)
-	var x float32
-	if tag == 4 {
-		binary.Read(apd.buff, binary.BigEndian, &x)
-		log.Printf("Real: %f", x)
+	x, err := apd.AppData()
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := x.(float32)
+	if f != -5.0 {
+		t.Fatalf("Final value was not decrypted properly")
 	}
 
 }
