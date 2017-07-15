@@ -103,6 +103,13 @@ func (d *Decoder) string(s *string, len int) {
 	d.decode(b)
 	*s = string(b)
 }
+func (e *Encoder) octetstring(b []byte) {
+	e.write([]byte(b))
+}
+func (d *Decoder) octetstring(b *[]byte, len int) {
+	*b = make([]byte, len)
+	d.decode(b)
+}
 
 func (e *Encoder) date(dt bactype.Date) {
 	// We don't want to override an unspecified time date
@@ -225,7 +232,9 @@ func (d *Decoder) AppData() (interface{}, error) {
 		d.double(&x)
 		return x, d.Error()
 	case tagOctetString:
-		return nil, fmt.Errorf("decoding octet strings is currently unsupported")
+		var b []byte
+		d.octetstring(&b, len)
+		return b, d.Error()
 
 	case tagCharacterString:
 		var s string
