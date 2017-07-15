@@ -49,10 +49,10 @@ func (c *Client) sendRequest() error {
 	return nil
 }
 
-func (c *Client) ReadProperty(dest *bactype.Address, rp bactype.ReadPropertyData) error {
+func (c *Client) ReadProperty(dest *bactype.Address, rp bactype.ReadPropertyData) (bactype.ReadPropertyData, error) {
 	id, err := c.tsm.GetFree()
 	if err != nil {
-		return err
+		return bactype.ReadPropertyData{}, err
 	}
 
 	enc := encoding.NewEncoder()
@@ -67,7 +67,7 @@ func (c *Client) ReadProperty(dest *bactype.Address, rp bactype.ReadPropertyData
 
 	enc.ReadProperty(uint8(id), rp)
 	if enc.Error() != nil {
-		return err
+		return bactype.ReadPropertyData{}, err
 	}
 
 	// the value filled doesn't matter. it just needs to be non nil
@@ -86,7 +86,14 @@ func (c *Client) ReadProperty(dest *bactype.Address, rp bactype.ReadPropertyData
 		}
 		var out bactype.ReadPropertyData
 		dec := encoding.NewDecoder(b)
-		err = dec.ReadProperty(&out)
+
+		var apdu bactype.APDU
+		dec.APDU(&apdu)
+		dec.ReadProperty(&out)
+		if err = dec.Error(); err != nil {
+			continue
+		}
+		return out, err
 	}
-	return err
+	return bactype.ReadPropertyData{}, err
 }
