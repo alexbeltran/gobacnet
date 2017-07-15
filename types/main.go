@@ -47,6 +47,11 @@ type ReadPropertyData struct {
 	ErrorCode          uint8
 }
 
+type ObjectID struct {
+	Type     uint16
+	Instance uint32
+}
+
 type Address struct {
 	Net    uint16
 	Len    uint8
