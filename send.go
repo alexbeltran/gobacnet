@@ -103,4 +103,3 @@ func (c *Client) Send(dest bactype.Address, data []byte) (int, error) {
 
 	return c.listener.WriteTo(e.Bytes(), &d)
 }
-
