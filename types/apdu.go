@@ -33,9 +33,30 @@ package types
 import "fmt"
 
 type ServiceConfirmed uint8
+type ServiceUnconfirmed uint8
 
 const MaxAPDUOverIP = 1476
 const MaxAPDU = MaxAPDUOverIP
+
+const (
+	ServiceUnconfirmedIAm               ServiceUnconfirmed = 0
+	ServiceUnconfirmedIHave             ServiceUnconfirmed = 1
+	ServiceUnconfirmedCOVNotification   ServiceUnconfirmed = 2
+	ServiceUnconfirmedEventNotification ServiceUnconfirmed = 3
+	ServiceUnconfirmedPrivateTransfer   ServiceUnconfirmed = 4
+	ServiceUnconfirmedTextMessage       ServiceUnconfirmed = 5
+	ServiceUnconfirmedTimeSync          ServiceUnconfirmed = 6
+	ServiceUnconfirmedWhoHas            ServiceUnconfirmed = 7
+	ServiceUnconfirmedWhoIs             ServiceUnconfirmed = 8
+	ServiceUnconfirmedUTCTimeSync       ServiceUnconfirmed = 9
+	ServiceUnconfirmedWriteGroup        ServiceUnconfirmed = 10
+	/* Other services to be added as they are defined. */
+	/* All choice values in this production are reserved */
+	/* for definition by ASHRAE. */
+	/* Proprietary extensions are made by using the */
+	/* UnconfirmedPrivateTransfer service. See Clause 23. */
+	MaxServiceUnconfirmed ServiceUnconfirmed = 11
+)
 
 const (
 	/* Alarm and Event Services */
@@ -94,6 +115,7 @@ type APDU struct {
 	Sequence                  uint8
 	WindowNumber              uint8
 	Service                   ServiceConfirmed
+	UnconfirmedService        ServiceUnconfirmed
 
 	// This is the raw data passed based on the service
 	Data []byte
@@ -104,8 +126,9 @@ type PDUType uint8
 
 // pdu requests
 const (
-	ConfirmedServiceRequest PDUType = 0
-	ComplexAck              PDUType = 0x30
+	ConfirmedServiceRequest   PDUType = 0
+	UnconfirmedServiceRequest PDUType = 0x10
+	ComplexAck                PDUType = 0x30
 )
 
 // IsConfirmedServiceRequest checks to see if the APDU is in the list of known services
