@@ -38,7 +38,7 @@ import (
 	"time"
 
 	"github.com/alexbeltran/gobacnet/encoding"
-	bactype "github.com/alexbeltran/gobacnet/types"
+	"github.com/alexbeltran/gobacnet/types"
 )
 
 const interfaceName = "eth1"
@@ -49,15 +49,14 @@ func TestMain(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer c.Close()
+	c.Close()
 
 	d, err := NewClient("pizzainterfacenotreal")
-	defer d.Close()
+	d.Close()
 	if err == nil {
 		t.Fatal("Successfully passed a false interface.")
 	}
 }
-
 func TestGetBroadcast(t *testing.T) {
 	failTest := func(addr string) {
 		_, err := getBroadcast(addr)
@@ -81,20 +80,12 @@ func TestGetBroadcast(t *testing.T) {
 	}
 }
 
-func TestWhoIs(t *testing.T) {
-	c, err := NewClient(interfaceName)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer c.Close()
-	c.sendRequest()
-}
-
 func TestReadPropertyService(t *testing.T) {
 	c, err := NewClient(interfaceName)
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer c.Close()
 	time.Sleep(time.Duration(1) * time.Second)
 
 	var mac []byte
@@ -102,14 +93,14 @@ func TestReadPropertyService(t *testing.T) {
 	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
 	json.Unmarshal([]byte("\"HQ==\""), &adr)
 	log.Println(mac)
-	dest := bactype.Address{
+	dest := types.Address{
 		Net:    2428,
 		Len:    1,
 		MacLen: 6,
 		Mac:    mac,
 		Adr:    adr,
 	}
-	read := bactype.ReadPropertyData{
+	read := types.ReadPropertyData{
 		ObjectType:     0,
 		ObjectInstance: 1,
 		ObjectProperty: 85, // Present value
@@ -124,22 +115,24 @@ func TestReadPropertyService(t *testing.T) {
 	log.Printf("Out Value 1: %v", out)
 	log.Printf("%v", read.ApplicationData)
 
-	read.ObjectProperty = 76
-	read.ObjectInstance = 242829
-	read.ObjectType = 8
-	//	read.ArrayIndex = 0
-	resp, err = c.ReadProperty(&dest, read)
-	if err != nil {
-		t.Fatal(err)
-	}
+	/*
+		read.ObjectProperty = 76
+		read.ObjectInstance = 242829
+		read.ObjectType = 8
+		//	read.ArrayIndex = 0
+		resp, err = c.ReadProperty(&dest, read)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	dec = encoding.NewDecoder(resp.ApplicationData)
-	out, err = dec.AppData()
-	if err != nil {
-		t.Fatal(err)
-	}
-	log.Printf("Out Value 2: %v", out)
-	log.Printf("Raw: %v", resp.ApplicationData)
+		dec = encoding.NewDecoder(resp.ApplicationData)
+		out, err = dec.AppData()
+		if err != nil {
+			t.Fatal(err)
+		}
+		log.Printf("Out Value 2: %v", out)
+		log.Printf("Raw: %v", resp.ApplicationData)
+	*/
 }
 func TestMac(t *testing.T) {
 	var mac []byte
@@ -147,4 +140,18 @@ func TestMac(t *testing.T) {
 	l := len(mac)
 	p := uint16(mac[l-1])<<8 | uint16(mac[l-1])
 	log.Printf("%d", p)
+}
+
+func TestWhoIs(t *testing.T) {
+	time.Sleep(time.Duration(1) * time.Second)
+	c, err := NewClient(interfaceName)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = c.WhoIs(242800, 242900)
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(time.Duration(30) * time.Second)
+	c.Close()
 }
