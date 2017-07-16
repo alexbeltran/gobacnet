@@ -31,10 +31,12 @@ License.
 package encoding
 
 import (
+	"fmt"
+
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (e *Encoder) APDU(a bactype.APDU) {
+func (e *Encoder) APDU(a bactype.APDU) error {
 	meta := APDUMetadata(0)
 	meta.setDataType(a.DataType)
 	meta.setMoreFollows(a.MoreFollows)
@@ -42,22 +44,34 @@ func (e *Encoder) APDU(a bactype.APDU) {
 	meta.setSegmentedAccepted(a.SegmentedResponseAccepted)
 	e.write(meta)
 
-	if a.DataType == bactype.ComplexAck {
-		e.apduCompledAck(a)
-		return
+	switch a.DataType {
+	case bactype.ComplexAck:
+		e.apduComplexAck(a)
+	case bactype.UnconfirmedServiceRequest:
+		e.apduUnconfirmed(a)
+	case bactype.ConfirmedServiceRequest:
+		e.apduConfirmed(a)
+	default:
+		return fmt.Errorf("Unknown PDU type:%d", a.DataType)
 	}
+	return nil
+}
 
+func (e *Encoder) apduConfirmed(a bactype.APDU) {
 	e.maxSegsMaxApdu(a.MaxSegs, a.MaxApdu)
 	e.write(a.InvokeId)
 	if a.SegmentedMessage {
 		e.write(a.Sequence)
 		e.write(a.WindowNumber)
 	}
-
 	e.write(a.Service)
 }
 
-func (e *Encoder) apduCompledAck(a bactype.APDU) {
+func (e *Encoder) apduUnconfirmed(a bactype.APDU) {
+	e.write(a.UnconfirmedService)
+}
+
+func (e *Encoder) apduComplexAck(a bactype.APDU) {
 	e.write(a.InvokeId)
 	e.write(a.Service)
 }
@@ -70,12 +84,29 @@ func (d *Decoder) APDU(a *bactype.APDU) error {
 	a.MoreFollows = meta.moreFollows()
 	a.DataType = meta.DataType()
 
-	if a.DataType == bactype.ComplexAck {
-		d.decode(&a.InvokeId)
-		d.decode(&a.Service)
-		return d.Error()
+	switch a.DataType {
+	case bactype.ComplexAck:
+		return d.apduComplexAck(a)
+	case bactype.UnconfirmedServiceRequest:
+		return d.apduUnconfirmed(a)
+	case bactype.ConfirmedServiceRequest:
+		return d.apduConfirmed(a)
+	default:
+		return fmt.Errorf("Unknown PDU type:%d", a.DataType)
 	}
+}
 
+func (d *Decoder) apduComplexAck(a *bactype.APDU) error {
+	d.decode(&a.InvokeId)
+	d.decode(&a.Service)
+	return d.Error()
+}
+
+func (d *Decoder) apduUnconfirmed(a *bactype.APDU) error {
+	d.decode(&a.UnconfirmedService)
+	return d.Error()
+}
+func (d *Decoder) apduConfirmed(a *bactype.APDU) error {
 	a.MaxSegs, a.MaxApdu = d.maxSegsMaxApdu()
 
 	d.decode(&a.InvokeId)
