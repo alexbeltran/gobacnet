@@ -80,15 +80,6 @@ func (d *Decoder) tagIncr() {
 	d.tagCounter++
 }
 
-type ErrorIncorrectTag struct {
-	Expected uint8
-	Given    uint8
-}
-
-func (e *ErrorIncorrectTag) Error() string {
-	return fmt.Sprintf("Incorrect tag %d, expected %d.", e.Given, e.Expected)
-}
-
 // contexTag decoder
 
 // Returns both a tag and additional meta data stored in this byte. If it is of
