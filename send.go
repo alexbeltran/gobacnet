@@ -32,7 +32,6 @@ package gobacnet
 
 import (
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/alexbeltran/gobacnet/encoding"
@@ -105,76 +104,3 @@ func (c *Client) Send(dest bactype.Address, data []byte) (int, error) {
 	return c.listener.WriteTo(e.Bytes(), &d)
 }
 
-//Close closes all inbound connections
-func (c *Client) Close() {
-	if c.listener == nil {
-		return
-	}
-
-	c.listener.Close()
-	c.listener = nil
-}
-
-func (c *Client) handleMsg(b []byte) {
-	var header bactype.BVLC
-	var npdu bactype.NPDU
-	var apdu bactype.APDU
-
-	dec := encoding.NewDecoder(b)
-	err := dec.BVLC(&header)
-	if err != nil {
-		log.Print(err)
-		return
-	}
-
-	if header.Function == bactype.BacFuncBroadcast || header.Function == bactype.BacFuncUnicast || header.Function == bactype.BacFuncForwardedNPDU {
-		// Remove the header information
-		b = b[mtuHeaderLength:]
-		err = dec.NPDU(&npdu)
-		if err != nil {
-			return
-		}
-
-		if npdu.IsNetworkLayerMessage {
-			//log.Print("Network Layer Message Discarded")
-			return
-		}
-
-		// We want to keep the APDU intact so we will get a snapshot before decoding
-		// further
-		send := dec.Bytes()
-		err = dec.APDU(&apdu)
-		if err != nil {
-			log.Print(err)
-			return
-		}
-
-		err := c.tsm.Send(int(apdu.InvokeId), send)
-		// No invoke id found. That probably means it wasn't for us
-		if err != nil {
-			return
-		}
-	}
-
-	if header.Function == bactype.BacFuncForwardedNPDU {
-		// Right now we are ignoring the NPDU data that is stored in the packet. Eventually
-		// we will need to check it for any additional information we can gleam.
-		// NDPU has source
-		b = b[forwardHeaderLength:]
-	}
-
-}
-
-// Receive
-func (c *Client) listen() error {
-	for c.listener != nil {
-		b := make([]byte, 1024)
-		i, _, err := c.listener.ReadFrom(b)
-		if err != nil {
-			log.Print(err)
-			continue
-		}
-		go c.handleMsg(b[:i])
-	}
-	return nil
-}
