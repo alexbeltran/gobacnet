@@ -70,6 +70,14 @@ func (a *Address) IsBroadcast() bool {
 	return false
 }
 
+func (a *Address) SetBroadcast(b bool) {
+	if b {
+		a.MacLen = 0
+	} else {
+		a.MacLen = uint8(len(a.Mac))
+	}
+}
+
 // IsSubBroadcast checks to see if packet is meant to be a network
 // specific broadcast
 func (a *Address) IsSubBroadcast() bool {
@@ -98,4 +106,25 @@ func (a *Address) UDPAddr() (net.UDPAddr, error) {
 		IP:   ip,
 		Port: int(port),
 	}, nil
+}
+
+// Address converts a given udp address into a bacnet address
+func UDPToAddress(n *net.UDPAddr) Address {
+	a := Address{}
+	p := uint16(n.Port)
+
+	// Length of IP plus the port
+	length := 4 + 2
+	a.Mac = make([]uint8, length)
+	//Encode ip
+	for i := range n.IP {
+		a.Mac[i] = n.IP[i]
+	}
+
+	// Encode port
+	a.Mac[len(n.IP)+0] = uint8(p >> 8)
+	a.Mac[len(n.IP)+1] = uint8(p & 0x00FF)
+
+	a.MacLen = uint8(length)
+	return a
 }
