@@ -32,6 +32,7 @@ package encoding
 
 import (
 	"encoding/json"
+	"log"
 	"testing"
 
 	bactype "github.com/alexbeltran/gobacnet/types"
@@ -139,5 +140,18 @@ func TestWhoIs(t *testing.T) {
 
 	if low != lowOut || high != highOut {
 		t.Fatalf("WhoIs was not decoded properly. Low was %d, given %d. High was %d, given %d", low, lowOut, high, highOut)
+	}
+}
+
+func TestIAm(t *testing.T) {
+	b := []byte{196, 2, 3, 180, 113, 34, 1, 224, 145, 3, 33, 24}
+	dec := NewDecoder(b)
+	for dec.len() > 0 {
+		x, err := dec.AppData()
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		log.Printf("app: %v", x)
 	}
 }

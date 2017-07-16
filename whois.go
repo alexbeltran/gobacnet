@@ -28,57 +28,39 @@ This exception does not invalidate any other reasons why a work
 based on this file might be covered by the GNU General Public
 License.
 */
-package encoding
+
+package gobacnet
 
 import (
-	bactype "github.com/alexbeltran/gobacnet/types"
+	"net"
+
+	"github.com/alexbeltran/gobacnet/encoding"
+	"github.com/alexbeltran/gobacnet/types"
 )
 
-func (e *Encoder) WhoIs(low, high int32) error {
-	apdu := bactype.APDU{
-		DataType:           bactype.UnconfirmedServiceRequest,
-		UnconfirmedService: bactype.ServiceUnconfirmedWhoIs,
-	}
-	e.write(apdu.DataType)
-	e.write(apdu.UnconfirmedService)
+func (c *Client) WhoIs(low, high int) error {
+	dest := types.UDPToAddress(&net.UDPAddr{
+		IP:   c.BroadcastAddress,
+		Port: c.Port,
+	})
+	dest.SetBroadcast(true)
 
-	// The range is optional. A scan for all objects is done when either low/high
-	// are negative or when we are scanning above the max instance
-	if low >= 0 && high >= 0 && low < bactype.MaxInstance && high <
-		bactype.MaxInstance {
-		// Tag 0
-		e.contextUnsigned(0, uint32(low))
+	enc := encoding.NewEncoder()
+	enc.NPDU(types.NPDU{
+		Version:               types.ProtocolVersion,
+		Destination:           &dest,
+		IsNetworkLayerMessage: false,
 
-		// Tag 1
-		e.contextUnsigned(1, uint32(high))
-	}
-	return e.Error()
-}
+		// We are not expecting a direct reply from a single destination
+		ExpectingReply: false,
+		Priority:       types.Normal,
+		HopCount:       types.DefaultHopCount,
+	})
 
-func (d *Decoder) WhoIs(low, high *int32) error {
-	// APDU read in a higher level
-	if d.len() == 0 {
-		*low = bactype.WhoIsAll
-		*high = bactype.WhoIsAll
-		return nil
+	err := enc.WhoIs(int32(low), int32(high))
+	if err != nil {
+		return err
 	}
-	// Tag 0 - Low Value
-	var expectedTag uint8
-	tag, _, value := d.tagNumberAndValue()
-	if tag != expectedTag {
-		return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-	}
-	l := d.unsigned(int(value))
-	*low = int32(l)
-
-	// Tag 1 - High Value
-	expectedTag = 1
-	tag, _, value = d.tagNumberAndValue()
-	if tag != expectedTag {
-		return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-	}
-	h := d.unsigned(int(value))
-	*high = int32(h)
-
-	return d.Error()
+	_, err = c.Send(dest, enc.Bytes())
+	return err
 }
