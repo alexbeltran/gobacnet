@@ -117,3 +117,27 @@ func TestReadPropertyResponse(t *testing.T) {
 	}
 
 }
+
+func TestWhoIs(t *testing.T) {
+	e := NewEncoder()
+	var low int32 = 28
+	var high int32 = 32
+	err := e.WhoIs(low, high)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := NewDecoder(e.Bytes())
+	a := bactype.APDU{}
+	d.APDU(&a)
+	var lowOut, highOut int32
+	d.WhoIs(&lowOut, &highOut)
+
+	if err = d.Error(); err != nil {
+		t.Fatal(err)
+	}
+
+	if low != lowOut || high != highOut {
+		t.Fatalf("WhoIs was not decoded properly. Low was %d, given %d. High was %d, given %d", low, lowOut, high, highOut)
+	}
+}
