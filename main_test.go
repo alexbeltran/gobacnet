@@ -37,6 +37,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/alexbeltran/gobacnet/encoding"
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
@@ -100,6 +101,7 @@ func TestReadPropertyService(t *testing.T) {
 	var adr []byte
 	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
 	json.Unmarshal([]byte("\"HQ==\""), &adr)
+	log.Println(mac)
 	dest := bactype.Address{
 		Net:    2428,
 		Len:    1,
@@ -113,10 +115,31 @@ func TestReadPropertyService(t *testing.T) {
 		ObjectProperty: 85, // Present value
 		ArrayIndex:     0xFFFFFFFF,
 	}
-	err = c.ReadProperty(&dest, read)
+	resp, err := c.ReadProperty(&dest, read)
 	if err != nil {
 		t.Fatal(err)
 	}
+	dec := encoding.NewDecoder(resp.ApplicationData)
+	out, err := dec.AppData()
+	log.Printf("Out Value 1: %v", out)
+	log.Printf("%v", read.ApplicationData)
+
+	read.ObjectProperty = 76
+	read.ObjectInstance = 242829
+	read.ObjectType = 8
+	//	read.ArrayIndex = 0
+	resp, err = c.ReadProperty(&dest, read)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dec = encoding.NewDecoder(resp.ApplicationData)
+	out, err = dec.AppData()
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Printf("Out Value 2: %v", out)
+	log.Printf("Raw: %v", resp.ApplicationData)
 }
 func TestMac(t *testing.T) {
 	var mac []byte
