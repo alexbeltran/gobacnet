@@ -80,10 +80,25 @@ func (c *Client) handleMsg(b []byte) {
 			log.Print(err)
 			return
 		}
-		err := c.tsm.Send(int(apdu.InvokeId), send)
-		// No invoke id found. That probably means it wasn't for us
-		if err != nil {
-			return
+		switch apdu.DataType {
+		case bactype.UnconfirmedServiceRequest:
+			if apdu.UnconfirmedService == bactype.ServiceUnconfirmedIAm {
+				log.Printf("I AM:%v", apdu.RawData)
+			} else {
+				log.Printf("Unconfirmed: %d", apdu.UnconfirmedService)
+			}
+		case bactype.ComplexAck:
+			err := c.tsm.Send(int(apdu.InvokeId), send)
+			if err != nil {
+				return
+			}
+		case bactype.ConfirmedServiceRequest:
+			err := c.tsm.Send(int(apdu.InvokeId), send)
+			if err != nil {
+				return
+			}
+		default:
+			// Ignore it
 		}
 	}
 
@@ -102,7 +117,6 @@ func (c *Client) listen() error {
 		b := make([]byte, 1024)
 		i, _, err := c.listener.ReadFrom(b)
 		if err != nil {
-			log.Print(err)
 			continue
 		}
 		go c.handleMsg(b[:i])
