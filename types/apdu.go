@@ -118,7 +118,7 @@ type APDU struct {
 	UnconfirmedService        ServiceUnconfirmed
 
 	// This is the raw data passed based on the service
-	Data []byte
+	RawData []byte
 }
 
 // pduType encomposes all valid pdus.

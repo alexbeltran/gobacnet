@@ -104,6 +104,8 @@ func (d *Decoder) apduComplexAck(a *bactype.APDU) error {
 
 func (d *Decoder) apduUnconfirmed(a *bactype.APDU) error {
 	d.decode(&a.UnconfirmedService)
+	a.RawData = make([]byte, d.len())
+	d.decode(a.RawData)
 	return d.Error()
 }
 func (d *Decoder) apduConfirmed(a *bactype.APDU) error {
@@ -117,8 +119,8 @@ func (d *Decoder) apduConfirmed(a *bactype.APDU) error {
 
 	d.decode(&a.Service)
 	if d.len() > 0 {
-		a.Data = make([]byte, d.len())
-		d.decode(&a.Data)
+		a.RawData = make([]byte, d.len())
+		d.decode(&a.RawData)
 	}
 
 	return d.Error()
