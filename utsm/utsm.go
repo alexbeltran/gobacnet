@@ -32,40 +32,62 @@ License.
 package utsm
 
 import (
-	"bytes"
-	"context"
 	"log"
 	"sync"
 	"time"
 )
 
-type subscriber struct {
-	// Start and End is the range that this object is subscribed to
-	Start        int
-	End          int
-	LastReceived time.Time
-	// Data channel is used for data transfer between subscriber and publisher
-	Data  chan []byte
-	mutex *sync.Mutex
-}
+const (
+	defaultOverallTimeout = time.Duration(10) * time.Second
 
+	// defaultSubTimeout is how long in between publish packages to a subscriber
+	// before we timeout waiting for additional data.
+	defaultSubTimeout = time.Duration(1) * time.Second
+)
+
+// Manager handles subscriptions and publications. Each manager is thread-safe
 type Manager struct {
-	subs  []*subscriber
-	mutex *sync.Mutex
+	subs              []*subscriber
+	mutex             *sync.Mutex
+	subTimeout        time.Duration
+	subOverallTimeout time.Duration
 }
 
-func NewManager() *Manager {
-	return &Manager{
-		mutex: &sync.Mutex{},
+// NewManager initializes a manager's internals. Do not allocate a struct of the
+// manager directly.
+func NewManager(options ...ManagerOption) *Manager {
+	m := &Manager{
+		subTimeout:        defaultSubTimeout,
+		subOverallTimeout: defaultOverallTimeout,
+		mutex:             &sync.Mutex{},
+	}
+	for _, op := range options {
+		op(m)
+	}
+	return m
+}
+
+// ManagerOption are function passed to NewManager to configure the manager
+type ManagerOption func(m *Manager)
+
+// DefaultSubscriberTimeout option sets a a timeout period when we have not
+// received any packages to a subscriber for the timeout period
+func DefaultSubscriberTimeout(timeout time.Duration) ManagerOption {
+	return func(m *Manager) {
+		m.mutex.Lock()
+		m.subOverallTimeout = timeout
+		m.mutex.Unlock()
 	}
 }
 
-func (s *subscriber) Deadline() time.Duration {
-	s.mutex.Lock()
-	// Deadline is x seconds after the last packet we received.
-	deadline := s.LastReceived.Add(time.Duration(1) * time.Second).Sub(time.Now())
-	s.mutex.Unlock()
-	return deadline
+// DefaultSubscriberTimeout option sets a a timeout period when we have not
+// received any packages to a subscriber for the timeout period
+func DefaultSubscriberLastReceivedTimeout(timeout time.Duration) ManagerOption {
+	return func(m *Manager) {
+		m.mutex.Lock()
+		m.subTimeout = timeout
+		m.mutex.Unlock()
+	}
 }
 
 func (m *Manager) Publish(id int, data []byte) {
@@ -73,27 +95,38 @@ func (m *Manager) Publish(id int, data []byte) {
 	defer m.mutex.Unlock()
 
 	for i, s := range m.subs {
-		if id >= s.Start && id <= s.End {
+		if id >= s.start && id <= s.end {
 			log.Printf("%d", i)
 			s.mutex.Lock()
-			s.Data <- data
-			s.LastReceived = time.Now()
+			s.lastReceived = time.Now()
+			s.data <- data
 			s.mutex.Unlock()
 		}
 	}
 }
 
-func (m *Manager) newSubscriber(start int, end int) *subscriber {
+func (m *Manager) newSubscriber(start int, end int, options []SubscriberOption) *subscriber {
 	s := &subscriber{
-		Start:        start,
-		End:          end,
-		LastReceived: time.Now(),
-		Data:         make(chan []byte, 1),
+		start:        start,
+		end:          end,
+		lastReceived: time.Now(),
+		data:         make(chan []byte, 1),
 		mutex:        &sync.Mutex{},
 	}
 	m.mutex.Lock()
 	m.subs = append(m.subs, s)
+
+	s.mutex.Lock()
+	s.timeout = m.subOverallTimeout
+	s.lastReceivedTimeout = m.subTimeout
+	s.mutex.Unlock()
+
 	m.mutex.Unlock()
+
+	for _, opt := range options {
+		opt(s)
+	}
+
 	return s
 }
 
@@ -117,27 +150,4 @@ func (m *Manager) removeSubscriber(sub *subscriber) {
 			return
 		}
 	}
-}
-
-// Subscribe
-func (m *Manager) Subscribe(start int, end int, timout time.Duration) ([]byte, error) {
-	var buff bytes.Buffer
-	s := m.newSubscriber(start, end)
-	defer m.removeSubscriber(s)
-
-	ctx, cancel := context.WithTimeout(context.Background(), timout)
-	defer cancel()
-
-	for {
-		c, can := context.WithTimeout(ctx, s.Deadline())
-		defer can()
-
-		select {
-		case <-c.Done():
-			return buff.Bytes(), nil
-		case b := <-s.Data:
-			buff.Write(b)
-		}
-	}
-	return buff.Bytes(), nil
 }

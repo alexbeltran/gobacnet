@@ -38,7 +38,7 @@ import (
 )
 
 func sub(t *testing.T, m *Manager, start, end int) {
-	b, err := m.Subscribe(start, end, time.Duration(10)*time.Second)
+	b, err := m.Subscribe(start, end)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -52,9 +52,14 @@ func publisher(t *testing.T, m *Manager) {
 	}
 }
 func TestUTSM(t *testing.T) {
-	m := NewManager()
+	opts := []ManagerOption{
+		DefaultSubscriberTimeout(time.Duration(2) * time.Second),
+		DefaultSubscriberLastReceivedTimeout(time.Duration(300) * time.Millisecond),
+	}
+	m := NewManager(opts...)
 
 	go publisher(t, m)
 	go sub(t, m, 9, 20)
+	go sub(t, m, 0, 2)
 	sub(t, m, 10, 30)
 }
