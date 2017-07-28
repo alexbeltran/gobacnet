@@ -29,9 +29,32 @@ based on this file might be covered by the GNU General Public
 License.
 */
 
-/*
-utsm is the Unconfirmed Transaction State Manager. These types of
-transactions do not necessarily have a single destination but rather multiple
-destinations. Using this library, we setup a simple pub-sub model.
-*/
 package utsm
+
+import (
+	"fmt"
+	"testing"
+	"time"
+)
+
+func sub(t *testing.T, m *Manager, start, end int) {
+	b, err := m.Subscribe(start, end, time.Duration(10)*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("[%d, %d] %s", start, end, string(b))
+}
+
+func publisher(t *testing.T, m *Manager) {
+	for i := 0; i < 5; i++ {
+		go m.Publish(20, []byte(fmt.Sprintf("HI!%d", i)))
+		time.Sleep(time.Duration(100) * time.Millisecond)
+	}
+}
+func TestUTSM(t *testing.T) {
+	m := NewManager()
+
+	go publisher(t, m)
+	go sub(t, m, 9, 20)
+	sub(t, m, 10, 30)
+}
