@@ -67,14 +67,18 @@ func getBroadcast(addr string) (net.IP, error) {
 	return broadcast, nil
 }
 
-func NewClient(inter string) (*Client, error) {
+func NewClient(inter string, port int) (*Client, error) {
 	c := &Client{}
 	i, err := net.InterfaceByName(inter)
 	if err != nil {
 		return c, err
 	}
 	c.Interface = i
-	c.Port = defaultIPPort
+	if port == 0 {
+		c.Port = DefaultPort
+	} else {
+		c.Port = port
+	}
 	uni, err := i.Addrs()
 	if err != nil {
 		return c, err

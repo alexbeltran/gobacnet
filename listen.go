@@ -84,6 +84,16 @@ func (c *Client) handleMsg(b []byte) {
 		case bactype.UnconfirmedServiceRequest:
 			if apdu.UnconfirmedService == bactype.ServiceUnconfirmedIAm {
 				log.Printf("I AM:%v", apdu.RawData)
+				dec = encoding.NewDecoder(apdu.RawData)
+				ids := make([]bactype.ObjectID, 1, 64)
+				err = dec.IAm(ids)
+				if err != nil {
+					log.Print(err)
+					return
+				}
+				for _, id := range ids {
+					log.Printf("Instance: %d, Type: %d", id.Instance, id.Type)
+				}
 			} else {
 				log.Printf("Unconfirmed: %d", apdu.UnconfirmedService)
 			}

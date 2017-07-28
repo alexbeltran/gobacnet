@@ -45,13 +45,13 @@ const interfaceName = "eth1"
 
 // TestMain are general test
 func TestMain(t *testing.T) {
-	c, err := NewClient(interfaceName)
+	c, err := NewClient(interfaceName, DefaultPort)
 	if err != nil {
 		t.Fatal(err)
 	}
 	c.Close()
 
-	d, err := NewClient("pizzainterfacenotreal")
+	d, err := NewClient("pizzainterfacenotreal", DefaultPort)
 	d.Close()
 	if err == nil {
 		t.Fatal("Successfully passed a false interface.")
@@ -81,7 +81,7 @@ func TestGetBroadcast(t *testing.T) {
 }
 
 func TestReadPropertyService(t *testing.T) {
-	c, err := NewClient(interfaceName)
+	c, err := NewClient(interfaceName, DefaultPort+1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +144,7 @@ func TestMac(t *testing.T) {
 
 func TestWhoIs(t *testing.T) {
 	time.Sleep(time.Duration(1) * time.Second)
-	c, err := NewClient(interfaceName)
+	c, err := NewClient(interfaceName, DefaultPort)
 	if err != nil {
 		t.Fatal(err)
 	}
