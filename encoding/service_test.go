@@ -131,6 +131,8 @@ func TestWhoIs(t *testing.T) {
 	d := NewDecoder(e.Bytes())
 	a := bactype.APDU{}
 	d.APDU(&a)
+
+	d = NewDecoder(a.RawData)
 	var lowOut, highOut int32
 	d.WhoIs(&lowOut, &highOut)
 

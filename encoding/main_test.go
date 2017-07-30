@@ -251,7 +251,7 @@ func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
 	a := bactype.APDU{}
 	d.APDU(&a)
 
-	serviceDecoder := NewDecoder(a.Data)
+	serviceDecoder := NewDecoder(a.RawData)
 
 	var outRd bactype.ReadPropertyData
 	err := serviceDecoder.ReadProperty(&outRd)
