@@ -68,7 +68,7 @@ func (e *Encoder) write(p interface{}) {
 
 func (e *Encoder) contextObjectID(tagNum uint8, objectType uint16, instance uint32) {
 	/* length of object id is 4 octets, as per 20.2.14 */
-	e.tag(tagNum, true, 4)
+	e.tag(tagInfo{ID: tagNum, Context: true, Value: 4})
 	e.objectId(objectType, instance)
 }
 
@@ -100,41 +100,41 @@ func (e *Encoder) tagNum(meta tagMeta, num uint8) {
 	}
 }
 
-func (e *Encoder) tag(tagNum uint8, contextSpecific bool, lenValueType uint32) {
+func (e *Encoder) tag(tg tagInfo) {
 	var t uint8
-	if contextSpecific {
+	if tg.Context {
 		var meta tagMeta
 		meta.setContextSpecific()
 		t = uint8(meta)
 	}
 
-	if lenValueType <= 4 {
-		t |= uint8(lenValueType)
+	if tg.Value <= 4 {
+		t |= uint8(tg.Value)
 	} else {
 		t |= 5
 	}
 
 	// We have enough room to put it with the last value
-	if tagNum <= 14 {
-		t |= (tagNum << 4)
+	if tg.ID <= 14 {
+		t |= (tg.ID << 4)
 		e.write(t)
 
 		// We don't have enough space so make it in a new byte
 	} else {
 		t |= 0xF0
 		e.write(t)
-		e.write(tagNum)
+		e.write(tg.ID)
 	}
-	if lenValueType > 4 {
+	if tg.Value > 4 {
 		// Depending on the length, we will either write it as an 8 bit, 32 bit, or 64 bit integer
-		if lenValueType <= 253 {
-			e.write(uint8(lenValueType))
-		} else if lenValueType <= 65535 {
+		if tg.Value <= 253 {
+			e.write(uint8(tg.Value))
+		} else if tg.Value <= 65535 {
 			e.write(flag16bit)
-			e.write(uint16(lenValueType))
+			e.write(uint16(tg.Value))
 		} else {
 			e.write(flag32bit)
-			e.write(lenValueType)
+			e.write(tg.Value)
 		}
 	}
 }
@@ -153,7 +153,7 @@ func (e *Encoder) contextEnumerated(tagNumber uint8, value uint32) {
 
 func (e *Encoder) contextUnsigned(tagNumber uint8, value uint32) {
 	len := valueLength(value)
-	e.tag(tagNumber, true, uint32(len))
+	e.tag(tagInfo{ID: tagNumber, Context: true, Value: uint32(len)})
 	e.unsigned(value)
 }
 

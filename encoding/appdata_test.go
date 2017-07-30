@@ -81,28 +81,28 @@ func generalSimpleDataTypes(t *testing.T, generic bool) func(t *testing.T) {
 			}
 
 		} else {
-			enc.tag(tagReal, appLayerContext, realLen)
+			enc.tag(tagInfo{ID: tagReal, Context: appLayerContext, Value: realLen})
 			enc.real(real)
 
-			enc.tag(tagDouble, appLayerContext, doubleLen)
+			enc.tag(tagInfo{ID: tagDouble, Context: appLayerContext, Value: doubleLen})
 			enc.double(double)
 
 			enc.boolean(boolean)
 			enc.boolean(!boolean)
 
-			enc.tag(tagUint, appLayerContext, size8)
+			enc.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: size8})
 			enc.unsigned(small)
 
-			enc.tag(tagUint, appLayerContext, size16)
+			enc.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: size16})
 			enc.unsigned(medium)
 
-			enc.tag(tagUint, appLayerContext, size24)
+			enc.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: size24})
 			enc.unsigned(wtf)
 
-			enc.tag(tagUint, appLayerContext, size32)
+			enc.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: size32})
 			enc.unsigned(large)
 
-			enc.tag(tagCharacterString, appLayerContext, uint32(len(str)))
+			enc.tag(tagInfo{ID: tagCharacterString, Context: appLayerContext, Value: uint32(len(str))})
 			enc.string(str)
 		}
 

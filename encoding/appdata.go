@@ -169,7 +169,7 @@ func (e *Encoder) boolean(x bool) {
 	} else {
 		length = 0
 	}
-	e.tag(tagBool, appLayerContext, length)
+	e.tag(tagInfo{ID: tagBool, Context: appLayerContext, Value: length})
 }
 
 func (e *Encoder) real(x float32) {
@@ -191,19 +191,19 @@ func (d *Decoder) double(x *float64) {
 func (e *Encoder) AppData(i interface{}) error {
 	switch val := i.(type) {
 	case float32:
-		e.tag(tagReal, appLayerContext, realLen)
+		e.tag(tagInfo{ID: tagReal, Context: appLayerContext, Value: realLen})
 		e.real(val)
 	case float64:
-		e.tag(tagDouble, appLayerContext, realLen)
+		e.tag(tagInfo{ID: tagDouble, Context: appLayerContext, Value: realLen})
 		e.double(val)
 	case bool:
 		e.boolean(val)
 	case string:
-		e.tag(tagCharacterString, appLayerContext, uint32(len(val)))
+		e.tag(tagInfo{ID: tagCharacterString, Context: appLayerContext, Value: uint32(len(val))})
 		e.string(val)
 	case uint32:
 		length := valueLength(val)
-		e.tag(tagUint, appLayerContext, uint32(length))
+		e.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: uint32(length)})
 		e.unsigned(val)
 	}
 	return nil

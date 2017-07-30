@@ -334,7 +334,7 @@ func TestReadPropertyMismatch(t *testing.T) {
 	// Has to be written 4 times at least since a minimum of 7 data is required
 	// for read property
 	for i := 0; i < 7; i++ {
-		e.tag(incorrectTag, true, randomValue)
+		e.tag(tagInfo{ID: incorrectTag, Context: true, Value: randomValue})
 	}
 	d := NewDecoder(e.Bytes())
 
@@ -352,7 +352,7 @@ func TestTag(t *testing.T) {
 	inValue := []uint32{4, 20, 6000, 1, 70000}
 
 	for i, tag := range inTag {
-		e.tag(tag, true, inValue[i])
+		e.tag(tagInfo{ID: tag, Context: true, Value: inValue[i]})
 	}
 
 	// Check for errors during the encoding processes
