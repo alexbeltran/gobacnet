@@ -102,12 +102,18 @@ func (e *Encoder) tagNum(meta tagMeta, num uint8) {
 
 func (e *Encoder) tag(tg tagInfo) {
 	var t uint8
+	var meta tagMeta
 	if tg.Context {
-		var meta tagMeta
 		meta.setContextSpecific()
-		t = uint8(meta)
+	}
+	if tg.Opening {
+		meta.setOpening()
+	}
+	if tg.Closing {
+		meta.setClosing()
 	}
 
+	t = uint8(meta)
 	if tg.Value <= 4 {
 		t |= uint8(tg.Value)
 	} else {
