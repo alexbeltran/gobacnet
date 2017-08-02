@@ -37,20 +37,22 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData) uint8 {
-	// Tag - Object Type and Instance
-	if data.Object.ID.Type < MaxObject {
-		e.contextObjectID(tagPos, data.Object.ID.Type, data.Object.ID.Instance)
+func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData) (uint8, error) {
+	// Validate data first
+	if err := isValidObjectType(data.Object.ID.Type); err != nil {
+		return 0, err
 	}
+	if err := isValidPropertyType(data.Object.Properties[0].Type); err != nil {
+		return 0, err
+	}
+
+	// Tag - Object Type and Instance
+	e.contextObjectID(tagPos, data.Object.ID.Type, data.Object.ID.Instance)
 	tagPos++
 
 	// Get first property
 	prop := data.Object.Properties[0]
-
-	// Tag - Object Property
-	if prop.Type < MaxPropertyID {
-		e.contextEnumerated(tagPos, prop.Type)
-	}
+	e.contextEnumerated(tagPos, prop.Type)
 	tagPos++
 
 	// Optional Tag - Array Index
@@ -58,7 +60,7 @@ func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData
 		e.contextUnsigned(tagPos, prop.ArrayIndex)
 	}
 	tagPos++
-	return tagPos
+	return tagPos, nil
 }
 
 // ReadProperty is a service request to read a property that is passed.
@@ -93,7 +95,10 @@ func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData)
 	}
 	e.APDU(a)
 
-	tagID := e.readPropertyHeader(initialTagPos, data)
+	tagID, err := e.readPropertyHeader(initialTagPos, data)
+	if err != nil {
+		return err
+	}
 
 	e.openingTag(tagID)
 	tagID++
