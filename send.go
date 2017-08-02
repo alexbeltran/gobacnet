@@ -98,9 +98,5 @@ func (c *Client) Send(dest bactype.Address, data []byte) (int, error) {
 	}
 
 	// use default udp type, src = local address (nil)
-	if err != nil {
-		return 0, err
-	}
-
 	return c.listener.WriteTo(e.Bytes(), &d)
 }

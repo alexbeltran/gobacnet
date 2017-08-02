@@ -33,6 +33,7 @@ package types
 
 import (
 	"fmt"
+	"log"
 	"net"
 )
 
@@ -55,6 +56,12 @@ type Property struct {
 
 type ReadPropertyData struct {
 	Object     Object
+	ErrorClass uint8
+	ErrorCode  uint8
+}
+
+type ReadMultipleProperty struct {
+	Objects    []Object
 	ErrorClass uint8
 	ErrorCode  uint8
 }
@@ -119,6 +126,8 @@ func (a *Address) UDPAddr() (net.UDPAddr, error) {
 func UDPToAddress(n *net.UDPAddr) Address {
 	a := Address{}
 	p := uint16(n.Port)
+	log.Println("ROCESSING")
+	log.Printf("IP: %v ", n.IP)
 
 	// Length of IP plus the port
 	length := 4 + 2

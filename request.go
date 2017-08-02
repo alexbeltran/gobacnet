@@ -54,11 +54,27 @@ func (c *Client) ReadProperty(dest *bactype.Address, rp bactype.ReadPropertyData
 	if err != nil {
 		return bactype.ReadPropertyData{}, err
 	}
+	/*
+		localAdd := c.listener.LocalAddr()
+		udpsrc, err := net.ResolveUDPAddr(localAdd.Network(), localAdd.String())
+		if err != nil {
+			return bactype.ReadPropertyData{}, err
+		}
+		log.Println("ME!?", udpsrc.String())
+		src := bactype.UDPToAddress(udpsrc)
+	*/
+	udp, err := c.LocalUDPAddress()
+	if err != nil {
+		return bactype.ReadPropertyData{}, err
+	}
+	log.Printf("%v", c.MyAddress)
+	src := bactype.UDPToAddress(udp)
 
 	enc := encoding.NewEncoder()
 	enc.NPDU(bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           dest,
+		Source:                &src,
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
