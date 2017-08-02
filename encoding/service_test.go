@@ -50,10 +50,18 @@ func TestReadPropertyService(t *testing.T) {
 	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
 	json.Unmarshal([]byte("\"HQ==\""), &adr)
 	readProp := bactype.ReadPropertyData{
-		ObjectType:     0,
-		ObjectInstance: 1,
-		ObjectProperty: 85,
-		ArrayIndex:     0xFFFFFFFF,
+		Object: bactype.Object{
+			ID: bactype.ObjectID{
+				Type:     0,
+				Instance: 1,
+			},
+			Properties: []bactype.Property{
+				bactype.Property{
+					Type:       85,
+					ArrayIndex: 0xFFFFFFFF,
+				},
+			},
+		},
 	}
 
 	dest := bactype.Address{
@@ -107,7 +115,7 @@ func TestReadPropertyResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	apd := NewDecoder(rpd.ApplicationData)
+	apd := NewDecoder(rpd.Object.Properties[0].ApplicationData)
 	x, err := apd.AppData()
 	if err != nil {
 		t.Fatal(err)

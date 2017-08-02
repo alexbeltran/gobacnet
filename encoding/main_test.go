@@ -225,15 +225,8 @@ func TestEnumerated(t *testing.T) {
 
 func compareReadProperties(t *testing.T, rd bactype.ReadPropertyData, outRd bactype.ReadPropertyData) {
 	// See if the initial read property data matches the output read property
-	compare(t, "object instance", uint(rd.ObjectInstance), uint(outRd.ObjectInstance))
-	compare(t, "boject type", uint(rd.ObjectType), uint(outRd.ObjectType))
-	compare(t, "object property", uint(rd.ObjectProperty), uint(outRd.ObjectProperty))
-	compare(t, "array index", uint(rd.ArrayIndex), uint(outRd.ArrayIndex))
-	compare(t, "application data length", uint(len(rd.ApplicationData)), uint(len(outRd.ApplicationData)))
-	if len(rd.ApplicationData) > 0 {
-		for i, _ := range rd.ApplicationData {
-			compare(t, "application data", uint(rd.ApplicationData[i]), uint(outRd.ApplicationData[i]))
-		}
+	if !reflect.DeepEqual(rd, outRd) {
+		t.Errorf("Mismatch between decrypted values. Received %v, expected %v", rd, outRd)
 	}
 }
 
@@ -284,30 +277,48 @@ func subTestReadPropertyAck(t *testing.T, rd bactype.ReadPropertyData) {
 
 func TestReadAckProperty(t *testing.T) {
 	rd := bactype.ReadPropertyData{
-		ObjectType:      37,
-		ObjectInstance:  1000,
-		ObjectProperty:  3921,
-		ArrayIndex:      ArrayAll,
-		ApplicationData: []byte{3, 7, 23, 5, 11},
+		Object: bactype.Object{
+			ID: bactype.ObjectID{
+				Type:     37,
+				Instance: 1000,
+			},
+			Properties: []bactype.Property{
+				bactype.Property{
+					Type:       3921,
+					ArrayIndex: ArrayAll,
+					Data:       []byte{3, 7, 23, 5, 11},
+				},
+			},
+		},
 	}
+	rd.Object.Properties[0].DataLen = len(rd.Object.Properties[0].Data)
 	subTestReadPropertyAck(t, rd)
 
-	rd.ArrayIndex = 2
+	rd.Object.Properties[0].ArrayIndex = 2
 	subTestReadPropertyAck(t, rd)
 }
 
 func TestReadProperty(t *testing.T) {
 	rd := bactype.ReadPropertyData{
-		ObjectType:     37,
-		ObjectInstance: 1000,
-		ObjectProperty: 3921,
-		ArrayIndex:     ArrayAll,
+		Object: bactype.Object{
+			ID: bactype.ObjectID{
+				Type:     37,
+				Instance: 1000,
+			},
+			Properties: []bactype.Property{
+				bactype.Property{
+					Type:       3921,
+					ArrayIndex: ArrayAll,
+				},
+			},
+		},
 	}
+
 	// Test a generic read property
 	subTestReadProperty(t, rd)
 
 	// Test with an array value given
-	rd.ArrayIndex = 1
+	rd.Object.Properties[0].ArrayIndex = 1
 	subTestReadProperty(t, rd)
 }
 

@@ -36,20 +36,27 @@ import (
 	"net"
 )
 
-type ReadPropertyData struct {
-	ObjectType         uint16
-	ObjectInstance     uint32
-	ObjectProperty     uint32
-	ArrayIndex         uint32
-	ApplicationData    []uint8
-	ApplicationDataLen int
-	ErrorClass         uint8
-	ErrorCode          uint8
-}
-
 type ObjectID struct {
 	Type     uint16
 	Instance uint32
+}
+
+type Object struct {
+	ID         ObjectID
+	Properties []Property
+}
+
+type Property struct {
+	Type       uint32
+	ArrayIndex uint32
+	Data       []uint8
+	DataLen    int
+}
+
+type ReadPropertyData struct {
+	Object     Object
+	ErrorClass uint8
+	ErrorCode  uint8
 }
 
 type Address struct {

@@ -39,20 +39,23 @@ import (
 
 func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData) uint8 {
 	// Tag - Object Type and Instance
-	if data.ObjectType < MaxObject {
-		e.contextObjectID(tagPos, data.ObjectType, data.ObjectInstance)
+	if data.Object.ID.Type < MaxObject {
+		e.contextObjectID(tagPos, data.Object.ID.Type, data.Object.ID.Instance)
 	}
 	tagPos++
 
+	// Get first property
+	prop := data.Object.Properties[0]
+
 	// Tag - Object Property
-	if data.ObjectProperty < MaxPropertyID {
-		e.contextEnumerated(tagPos, data.ObjectProperty)
+	if prop.Type < MaxPropertyID {
+		e.contextEnumerated(tagPos, prop.Type)
 	}
 	tagPos++
 
 	// Optional Tag - Array Index
-	if data.ArrayIndex != ArrayAll {
-		e.contextUnsigned(tagPos, data.ArrayIndex)
+	if prop.ArrayIndex != ArrayAll {
+		e.contextUnsigned(tagPos, prop.ArrayIndex)
 	}
 	tagPos++
 	return tagPos
@@ -75,7 +78,11 @@ func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) er
 }
 
 // ReadPropertyAck is the response made to a ReadProperty service request.
-func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData) {
+func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData) error {
+	if len(data.Object.Properties) != 1 {
+		return fmt.Errorf("Property length length must be 1 not %d", len(data.Object.Properties))
+	}
+
 	// PDU Type
 	a := bactype.APDU{
 		DataType: bactype.ComplexAck,
@@ -90,10 +97,12 @@ func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData)
 
 	e.openingTag(tagID)
 	tagID++
-	for _, d := range data.ApplicationData {
+	prop := data.Object.Properties[0]
+	for _, d := range prop.Data {
 		e.write(d)
 	}
 	e.closingTag(tagID)
+	return e.Error()
 }
 
 func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
@@ -113,11 +122,12 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 
 	var objectType uint16
 	var instance uint32
-	var property uint32
 	if !meta.isContextSpecific() {
 		return fmt.Errorf("Tag %d should be context specific. %x", tag, meta)
 	}
 	objectType, instance = d.objectId()
+	data.Object.ID.Type = objectType
+	data.Object.ID.Instance = instance
 
 	// Tag 1: Property ID
 	tag, meta = d.tagNumber()
@@ -127,12 +137,14 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 	expectedTag++
 
 	lenValue := d.value(meta)
-	property = d.enumerated(int(lenValue))
+
+	var prop bactype.Property
+	prop.Type = d.enumerated(int(lenValue))
+
 	if d.len() != 0 {
 		tag, meta = d.tagNumber()
 	}
 
-	var arrIndex uint32
 	// Check to see if we still have bytes to read.
 	if d.buff.Len() != 0 || tag >= 2 {
 		// If we do then that means we are reading the optional argument,
@@ -146,30 +158,29 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 		// I tried to not use magic numbers but it doesn't look like it can be avoid
 		// If the attag we receive is a tag of 2 then set the value
 		if tag == 2 {
-			arrIndex = d.unsigned(int(lenValue))
+			prop.ArrayIndex = d.unsigned(int(lenValue))
 			if d.len() > 0 {
 				openTag, meta = d.tagNumber()
 			}
 		} else {
 			openTag = tag
-			arrIndex = ArrayAll
+			prop.ArrayIndex = ArrayAll
 		}
 
 		if openTag == 3 {
 			// We subtract one to ignore the closing tag.
-			data.ApplicationDataLen = d.buff.Len() - 1
-			data.ApplicationData = make([]byte, d.buff.Len()-1)
-			d.decode(data.ApplicationData)
+			prop.DataLen = d.buff.Len() - 1
+			prop.Data = make([]byte, d.buff.Len()-1)
+			d.decode(prop.Data)
 		}
 	} else {
-		arrIndex = ArrayAll
+		prop.ArrayIndex = ArrayAll
 	}
 
 	// We now assemble all the values that we have read above
-	data.ObjectInstance = instance
-	data.ObjectType = objectType
-	data.ObjectProperty = property
-	data.ArrayIndex = arrIndex
+	data.Object.ID.Instance = instance
+	data.Object.ID.Type = objectType
+	data.Object.Properties = []bactype.Property{prop}
 
 	return d.Error()
 }

@@ -101,19 +101,27 @@ func TestReadPropertyService(t *testing.T) {
 		Adr:    adr,
 	}
 	read := types.ReadPropertyData{
-		ObjectType:     0,
-		ObjectInstance: 1,
-		ObjectProperty: 85, // Present value
-		ArrayIndex:     0xFFFFFFFF,
+		Object: types.Object{
+			ID: types.ObjectID{
+				Type:     0,
+				Instance: 1,
+			},
+			Properties: []types.Property{
+				types.Property{
+					Type:       85, // Present value
+					ArrayIndex: 0xFFFFFFFF,
+				},
+			},
+		},
 	}
 	resp, err := c.ReadProperty(&dest, read)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dec := encoding.NewDecoder(resp.ApplicationData)
+	dec := encoding.NewDecoder(resp.Object.Properties[0].Data)
 	out, err := dec.AppData()
 	log.Printf("Out Value 1: %v", out)
-	log.Printf("%v", read.ApplicationData)
+	log.Printf("%v", read.Object.Properties[0].Data)
 
 	/*
 		read.ObjectProperty = 76
