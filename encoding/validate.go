@@ -12,7 +12,7 @@ func isValidObjectType(idType uint16) error {
 }
 
 func isValidPropertyType(propType uint32) error {
-	if propType < MaxPropertyID {
+	if propType > MaxPropertyID {
 		return fmt.Errorf("Object types is %d which must be less then %d", propType, MaxPropertyID)
 	}
 	return nil
