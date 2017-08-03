@@ -115,7 +115,7 @@ func TestReadPropertyResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	apd := NewDecoder(rpd.Object.Properties[0].ApplicationData)
+	apd := NewDecoder(rpd.Object.Properties[0].Data)
 	x, err := apd.AppData()
 	if err != nil {
 		t.Fatal(err)
