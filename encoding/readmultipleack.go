@@ -1,6 +1,8 @@
 package encoding
 
 import (
+	"fmt"
+
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
@@ -59,4 +61,128 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 		e.write(prop.Data)
 	}
 	return e.Error()
+}
+
+func (d *Decoder) ReadMultiplePropertyAck(invokeID uint8, data bactype.ReadMultipleProperty) error {
+
+}
+
+func (d *Decoder) objectsWithData(objects []bactype.Object) error {
+	obj := bactype.Object{}
+	objType, instance := d.objectId()
+
+	for d.Error() == nil && d.len() > 0 {
+		tag, meta := d.tagNumber()
+		// Tag 0 - Object ID
+		var expectedTag uint8
+
+		if tag != expectedTag {
+			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
+		}
+		if !meta.isContextSpecific() {
+			return &ErrorWrongTagType{ContextTag}
+		}
+
+		obj.ID.Type = objType
+		obj.ID.Instance = instance
+
+		// Tag 1 - Opening Tag
+		expectedTag++
+		tag, meta = d.tagNumber()
+		if tag != expectedTag {
+			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
+		}
+		if !meta.isOpening() {
+			return &ErrorWrongTagType{OpeningTag}
+		}
+
+		// Tag 2 - Property Tag
+		expectedTag = 2
+		tag, meta, length := d.tagNumberAndValue()
+		if !meta.isContextSpecific() {
+			return &ErrorWrongTagType{ContextTag}
+		}
+		if tag != expectedTag {
+			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
+		}
+		prop := bactype.Property{}
+		prop.Type = d.enumerated(int(length))
+
+		// Tag 3 - (Optional) Array Length
+		tag, meta = d.tagNumber()
+		if tag == 3 {
+			if !meta.isContextSpecific() {
+				return &ErrorWrongTagType{ContextTag}
+			}
+			length = d.value(meta)
+			prop.ArrayIndex = d.unsigned(int(length))
+			// Move to the next tag
+			tag, meta = d.tagNumber()
+		} else {
+			prop.ArrayIndex = ArrayAll
+		}
+
+		// Tag 4 - Opening Tag
+		expectedTag = 4
+		if tag != expectedTag {
+			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
+		}
+		if !meta.isOpening() {
+			return &ErrorWrongTagType{OpeningTag}
+		}
+
+		expectedTag = 4
+		if tag != expectedTag {
+			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
+		}
+		if !meta.isClosing() {
+			return &ErrorWrongTagType{ClosingTag}
+		}
+
+		// Tag 5 - (Optional) Error Code
+		expectedTag = 5
+		if tag == expectedTag {
+			// We have an error
+			if !meta.isOpening() {
+				return &ErrorWrongTagType{OpeningTag}
+			}
+			errorClass, err := d.AppData()
+			if err != nil {
+				return err
+			}
+			switch val := errorClass.(type) {
+			case uint32:
+			// STORE ERROR
+			default:
+				return fmt.Errorf("Receive bacnet error of unknown type")
+			}
+			errorCode, err := d.AppData()
+			if err != nil {
+				return err
+			}
+			switch val := errorCode.(type) {
+			case uint32:
+			// STORE ERROR
+			default:
+				return fmt.Errorf("Receive bacnet error of unknown type")
+			}
+
+			tag, meta = d.tagNumber()
+			if !meta.isClosing() {
+				return &ErrorWrongTagType{ClosingTag}
+			}
+
+		}
+
+		// Tag 1 - Closing Tag
+		expectedTag = 1
+		if tag != expectedTag {
+			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
+		}
+		if !meta.isClosing() {
+			return fmt.Errorf("Expecting closing tag")
+		}
+
+	}
+	return d.Error()
 }

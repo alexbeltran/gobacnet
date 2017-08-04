@@ -55,6 +55,7 @@ type Property struct {
 }
 
 type ReadPropertyData struct {
+	InvokeID   uint16
 	Object     Object
 	ErrorClass uint8
 	ErrorCode  uint8
