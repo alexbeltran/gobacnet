@@ -64,7 +64,32 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 }
 
 func (d *Decoder) ReadMultiplePropertyAck(invokeID uint8, data bactype.ReadMultipleProperty) error {
+	return nil
+}
 
+func (d *Decoder) bacError(errorClass, errorCode *uint32) error {
+	data, err := d.AppData()
+	if err != nil {
+		return err
+	}
+	switch val := data.(type) {
+	case uint32:
+		*errorClass = val
+	default:
+		return fmt.Errorf("Receive bacnet error of unknown type")
+	}
+
+	data, err = d.AppData()
+	if err != nil {
+		return err
+	}
+	switch val := data.(type) {
+	case uint32:
+		*errorCode = val
+	default:
+		return fmt.Errorf("Receive bacnet error of unknown type")
+	}
+	return nil
 }
 
 func (d *Decoder) objectsWithData(objects []bactype.Object) error {
@@ -146,27 +171,6 @@ func (d *Decoder) objectsWithData(objects []bactype.Object) error {
 			if !meta.isOpening() {
 				return &ErrorWrongTagType{OpeningTag}
 			}
-			errorClass, err := d.AppData()
-			if err != nil {
-				return err
-			}
-			switch val := errorClass.(type) {
-			case uint32:
-			// STORE ERROR
-			default:
-				return fmt.Errorf("Receive bacnet error of unknown type")
-			}
-			errorCode, err := d.AppData()
-			if err != nil {
-				return err
-			}
-			switch val := errorCode.(type) {
-			case uint32:
-			// STORE ERROR
-			default:
-				return fmt.Errorf("Receive bacnet error of unknown type")
-			}
-
 			tag, meta = d.tagNumber()
 			if !meta.isClosing() {
 				return &ErrorWrongTagType{ClosingTag}
