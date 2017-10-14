@@ -1,3 +1,16 @@
+# Introduction
+gobacnet is a client for bacnet written exclusively with go. The goal is to
+only offer a client and a test server application.
+
+**NOTE:** This code is very experimental and therefore should not be used in
+anything you want working. There are many changes being made and I cannot
+guarantee compatibility between versions. Many features of the protocol are
+missing and will be added overtime. 
+
+# Contributing
+Contributions are more then welcome for this project. Use golint for
+formatting and be sure to include test coverage on any new additions. 
+
 # License
 This library is heavily based on the BACnet-Stack library originally written by
 Steve Karg and therefore is released under the same license as his project.
