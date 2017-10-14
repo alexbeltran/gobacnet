@@ -205,6 +205,12 @@ func (e *Encoder) AppData(i interface{}) error {
 		length := valueLength(val)
 		e.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: uint32(length)})
 		e.unsigned(val)
+	case bactype.ObjectID:
+		e.tag(tagInfo{ID: tagObjectID, Context: appLayerContext, Value: objectIDLen})
+		e.objectId(val.Type, val.Instance)
+
+	default:
+		return fmt.Errorf("Unknown type %T", i)
 	}
 	return nil
 }

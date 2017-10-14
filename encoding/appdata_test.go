@@ -33,6 +33,8 @@ package encoding
 import (
 	"reflect"
 	"testing"
+
+	"github.com/alexbeltran/gobacnet/types"
 )
 
 func subTestSimpleData(t *testing.T, d *Decoder, x interface{}) func(t *testing.T) {
@@ -74,8 +76,10 @@ func generalSimpleDataTypes(t *testing.T, generic bool) func(t *testing.T) {
 		var large uint32 = 0xFFFFFFF0
 
 		str := "pizza pizza"
+		objID := types.ObjectID{93, 42}
+
 		if generic {
-			values := []interface{}{real, double, boolean, !boolean, small, medium, wtf, large, str}
+			values := []interface{}{real, double, boolean, !boolean, small, medium, wtf, large, str, objID}
 			for _, v := range values {
 				enc.AppData(v)
 			}
@@ -104,6 +108,9 @@ func generalSimpleDataTypes(t *testing.T, generic bool) func(t *testing.T) {
 
 			enc.tag(tagInfo{ID: tagCharacterString, Context: appLayerContext, Value: uint32(len(str))})
 			enc.string(str)
+
+			enc.tag(tagInfo{ID: tagObjectID, Context: appLayerContext, Value: objectIDLen})
+			enc.objectId(objID.Type, objID.Instance)
 		}
 
 		if err := enc.Error(); err != nil {
@@ -120,6 +127,7 @@ func generalSimpleDataTypes(t *testing.T, generic bool) func(t *testing.T) {
 		t.Run("Encoding uint24", subTestSimpleData(t, dec, wtf))
 		t.Run("Encoding uint32", subTestSimpleData(t, dec, large))
 		t.Run("Encoding string", subTestSimpleData(t, dec, str))
+		t.Run("Encoding object id", subTestSimpleData(t, dec, objID))
 
 		if err := dec.Error(); err != nil {
 			t.Fatal(err)

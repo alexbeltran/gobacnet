@@ -33,6 +33,7 @@ package encoding
 import (
 	"encoding/json"
 	"log"
+	"reflect"
 	"testing"
 
 	bactype "github.com/alexbeltran/gobacnet/types"
@@ -153,7 +154,7 @@ func TestWhoIs(t *testing.T) {
 	}
 }
 
-func TestIAm(t *testing.T) {
+func TestIAmRealData(t *testing.T) {
 	b := []byte{196, 2, 3, 180, 113, 34, 1, 224, 145, 3, 33, 24}
 	dec := NewDecoder(b)
 	for dec.len() > 0 {
@@ -164,4 +165,28 @@ func TestIAm(t *testing.T) {
 
 		log.Printf("app: %v", x)
 	}
+}
+
+func TestIAm(t *testing.T) {
+	ids := []bactype.ObjectID{
+		bactype.ObjectID{Instance: 1, Type: 5},
+		bactype.ObjectID{Instance: 99, Type: 6},
+		bactype.ObjectID{Instance: 133, Type: 1},
+	}
+	enc := NewEncoder()
+	err := enc.IAm(ids)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dec := NewDecoder(enc.Bytes())
+
+	decIds := make([]bactype.ObjectID, len(ids))
+	err = dec.IAm(decIds[:])
+
+	equal := reflect.DeepEqual(ids, decIds)
+	if !equal {
+		t.Errorf("Encoding/Decoding Failed: %v does not equal %v", ids, decIds)
+	}
+
 }
