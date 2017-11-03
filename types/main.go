@@ -131,16 +131,16 @@ func UDPToAddress(n *net.UDPAddr) Address {
 	log.Printf("IP: %v ", n.IP)
 
 	// Length of IP plus the port
-	length := 4 + 2
+	length := net.IPv4len + 2
 	a.Mac = make([]uint8, length)
 	//Encode ip
-	for i := range n.IP {
+	for i := 0; i < net.IPv4len; i++ {
 		a.Mac[i] = n.IP[i]
 	}
 
 	// Encode port
-	a.Mac[len(n.IP)+0] = uint8(p >> 8)
-	a.Mac[len(n.IP)+1] = uint8(p & 0x00FF)
+	a.Mac[net.IPv4len+0] = uint8(p >> 8)
+	a.Mac[net.IPv4len+1] = uint8(p & 0x00FF)
 
 	a.MacLen = uint8(length)
 	return a
