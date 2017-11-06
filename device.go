@@ -35,7 +35,6 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"net"
 
 	"github.com/alexbeltran/gobacnet/encoding"
@@ -133,6 +132,5 @@ func (c *Client) LocalAddress() (la bactype.Address, err error) {
 
 func (c *Client) LocalUDPAddress() (*net.UDPAddr, error) {
 	netstr := fmt.Sprintf("%s:%d", "0.0.0.0", c.Port)
-	log.Printf(netstr)
 	return net.ResolveUDPAddr("udp4", netstr)
 }

@@ -33,7 +33,6 @@ package types
 
 import (
 	"fmt"
-	"log"
 	"net"
 )
 
@@ -127,8 +126,6 @@ func (a *Address) UDPAddr() (net.UDPAddr, error) {
 func UDPToAddress(n *net.UDPAddr) Address {
 	a := Address{}
 	p := uint16(n.Port)
-	log.Println("ROCESSING")
-	log.Printf("IP: %v ", n.IP)
 
 	// Length of IP plus the port
 	length := net.IPv4len + 2
