@@ -86,9 +86,25 @@ func NewClient(inter string, port int) (*Client, error) {
 	if len(uni) == 0 {
 		return c, fmt.Errorf("interface %s has no addresses", inter)
 	}
-	c.MyAddress = uni[0].String()
 
-	broadcast, err := getBroadcast(uni[0].String())
+	// Clear out the value
+	c.MyAddress = ""
+	// Find the first IP4 ip
+	for _, adr := range uni {
+		IP, _, _ := net.ParseCIDR(adr.String())
+
+		// To4 is non nil when the type is ip4
+		if IP.To4() != nil {
+			c.MyAddress = adr.String()
+			break
+		}
+	}
+	if len(c.MyAddress) == 0 {
+		// We couldn't find a interface or all of them are ip6
+		return nil, fmt.Errorf("No valid broadcasting address was found on interface %s", inter)
+	}
+
+	broadcast, err := getBroadcast(c.MyAddress)
 	if err != nil {
 		return c, err
 	}
