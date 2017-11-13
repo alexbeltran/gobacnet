@@ -14,7 +14,10 @@
 package cmd
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
+	"os"
 
 	"github.com/alexbeltran/gobacnet"
 	"github.com/spf13/cobra"
@@ -39,17 +42,31 @@ to quickly create a Cobra application.`,
 	Run: main,
 }
 
+func hexprint(arr []uint8) {
+	for i := 0; i < len(arr); i = i + 2 {
+		fmt.Printf("%x%x", arr[i], arr[i+1])
+	}
+}
+
 func main(cmd *cobra.Command, args []string) {
 	c, err := gobacnet.NewClient(Interface, Port)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer c.Close()
 
-	err = c.WhoIs(startRange, endRange)
+	ids, err := c.WhoIs(startRange, endRange)
 	if err != nil {
 		log.Fatal(err)
 	}
-	c.Close()
+
+	hexprint(ids[0].Addr.Mac)
+
+	// Pretty Print!
+	w := json.NewEncoder(os.Stdout)
+	w.SetIndent("", "    ")
+	w.Encode(ids)
+
 }
 
 func init() {

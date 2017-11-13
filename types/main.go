@@ -81,6 +81,7 @@ type IAm struct {
 	MaxApdu      uint32
 	Segmentation Enumerated
 	Vendor       uint32
+	Addr         Address
 }
 
 const broadcastNetwork uint16 = 0xFFFF

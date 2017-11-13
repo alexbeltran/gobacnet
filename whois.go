@@ -32,14 +32,13 @@ License.
 package gobacnet
 
 import (
-	"log"
 	"net"
 
 	"github.com/alexbeltran/gobacnet/encoding"
 	"github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) WhoIs(low, high int) error {
+func (c *Client) WhoIs(low, high int) ([]types.IAm, error) {
 	dest := types.UDPToAddress(&net.UDPAddr{
 		IP:   c.BroadcastAddress,
 		Port: DefaultPort,
@@ -64,25 +63,39 @@ func (c *Client) WhoIs(low, high int) error {
 
 	err := enc.WhoIs(int32(low), int32(high))
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	// Subscribe to any changes in the the range. If it is a broadcast,
+	var start, end int
+	if low == -1 || high == -1 {
+		start = 0
+		end = 0xFFFFFFFF
+	}
+
 	_, err = c.Send(dest, enc.Bytes())
 	if err != nil {
-		return err
+		return nil, err
 	}
-	// Subscribe to any changes in the the range. If it is a broadcast,
-	//	var start, end int
-	//	if low == -1 || high == -1 {
-	//		start = 0
-	//		end = 2 ^ 16
-	//	}
+	values, err := c.utsm.Subscribe(start, end)
 
-	values, err := c.utsm.Subscribe(0, 2000)
 	// Weed out values that are not important such as non object type
 	// and that are not
+	uniqueMap := make(map[uint32]types.IAm)
+	uniqueList := make([]types.IAm, len(uniqueMap))
 	for _, v := range values {
-		log.Printf("%v", v)
-	}
+		r, ok := v.(types.IAm)
 
-	return err
+		// Skip non I AM responses
+		if !ok {
+			continue
+		}
+
+		// Check to see if we are in the map before inserting
+		if _, ok := uniqueMap[r.ID.Instance]; !ok {
+			uniqueMap[r.ID.Instance] = r
+			uniqueList = append(uniqueList, r)
+		}
+	}
+	return uniqueList, err
 }

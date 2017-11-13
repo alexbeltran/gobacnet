@@ -49,7 +49,7 @@ func (c *Client) Close() {
 	c.listener = nil
 }
 
-func (c *Client) handleMsg(src net.Addr, b []byte) {
+func (c *Client) handleMsg(src *net.UDPAddr, b []byte) {
 	var header bactype.BVLC
 	var npdu bactype.NPDU
 	var apdu bactype.APDU
@@ -87,7 +87,13 @@ func (c *Client) handleMsg(src net.Addr, b []byte) {
 			if apdu.UnconfirmedService == bactype.ServiceUnconfirmedIAm {
 				dec = encoding.NewDecoder(apdu.RawData)
 				var iam bactype.IAm
+
 				err = dec.IAm(&iam)
+
+				// For whatever reason, the IP section won't be populated until
+				// we set the type.
+				src.IP = src.IP.To4()
+				iam.Addr = bactype.UDPToAddress(src)
 				if err != nil {
 					log.Print(err)
 					return
@@ -131,7 +137,7 @@ func (c *Client) handleMsg(src net.Addr, b []byte) {
 func (c *Client) listen() error {
 	for c.listener != nil {
 		b := make([]byte, 1024)
-		i, adr, err := c.listener.ReadFrom(b)
+		i, adr, err := c.listener.ReadFromUDP(b)
 		if err != nil {
 			log.Println(err)
 			continue
