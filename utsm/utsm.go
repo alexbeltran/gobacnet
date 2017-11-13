@@ -32,7 +32,6 @@ License.
 package utsm
 
 import (
-	"log"
 	"sync"
 	"time"
 )
@@ -96,7 +95,6 @@ func (m *Manager) Publish(id int, data interface{}) {
 
 	for i, s := range m.subs {
 		if id >= s.start && id <= s.end {
-			log.Printf("%d", i)
 			s.mutex.Lock()
 			s.lastReceived = time.Now()
 			s.data <- data
