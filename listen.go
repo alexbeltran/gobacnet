@@ -92,9 +92,6 @@ func (c *Client) handleMsg(src net.Addr, b []byte) {
 					log.Print(err)
 					return
 				}
-				log.Println("RAW DATA")
-				log.Println(apdu.RawData)
-				log.Println("Done")
 				c.utsm.Publish(int(iam.ID.Instance), iam)
 			} else if apdu.UnconfirmedService == bactype.ServiceUnconfirmedWhoIs {
 
