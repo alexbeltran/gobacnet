@@ -36,6 +36,8 @@ import (
 	"net"
 )
 
+type Enumerated uint32
+
 type ObjectID struct {
 	Type     uint16
 	Instance uint32
@@ -72,6 +74,13 @@ type Address struct {
 	MacLen uint8
 	Mac    []uint8
 	Adr    []uint8
+}
+
+type IAm struct {
+	ID           ObjectID
+	MaxApdu      uint32
+	Segmentation Enumerated
+	Vendor       uint32
 }
 
 const broadcastNetwork uint16 = 0xFFFF

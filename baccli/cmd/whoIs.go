@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"log"
-	"time"
 
 	"github.com/alexbeltran/gobacnet"
 	"github.com/spf13/cobra"
@@ -47,12 +46,9 @@ func main(cmd *cobra.Command, args []string) {
 	}
 
 	err = c.WhoIs(startRange, endRange)
-	log.Println("WHO IS!")
 	if err != nil {
 		log.Fatal(err)
 	}
-	time.Sleep(time.Duration(5) * time.Second)
-	log.Println("DONE")
 	c.Close()
 }
 

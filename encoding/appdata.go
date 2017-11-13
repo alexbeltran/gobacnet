@@ -205,6 +205,13 @@ func (e *Encoder) AppData(i interface{}) error {
 		length := valueLength(val)
 		e.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: uint32(length)})
 		e.unsigned(val)
+
+	// Enumerated is pretty much a wrapper for a uint32 with an enumerated associated with it.
+	case bactype.Enumerated:
+		v := uint32(val)
+		length := valueLength(v)
+		e.tag(tagInfo{ID: tagEnumerated, Context: appLayerContext, Value: uint32(length)})
+		e.enumerated(v)
 	case bactype.ObjectID:
 		e.tag(tagInfo{ID: tagObjectID, Context: appLayerContext, Value: objectIDLen})
 		e.objectId(val.Type, val.Instance)

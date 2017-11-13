@@ -32,6 +32,7 @@ License.
 package gobacnet
 
 import (
+	"log"
 	"net"
 
 	"github.com/alexbeltran/gobacnet/encoding"
@@ -66,5 +67,22 @@ func (c *Client) WhoIs(low, high int) error {
 		return err
 	}
 	_, err = c.Send(dest, enc.Bytes())
+	if err != nil {
+		return err
+	}
+	// Subscribe to any changes in the the range. If it is a broadcast,
+	//	var start, end int
+	//	if low == -1 || high == -1 {
+	//		start = 0
+	//		end = 2 ^ 16
+	//	}
+
+	values, err := c.utsm.Subscribe(0, 2000)
+	// Weed out values that are not important such as non object type
+	// and that are not
+	for _, v := range values {
+		log.Printf("%v", v)
+	}
+
 	return err
 }

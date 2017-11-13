@@ -32,26 +32,40 @@ License.
 package encoding
 
 import (
-	"fmt"
-
 	"github.com/alexbeltran/gobacnet/types"
 )
 
-func (d *Decoder) IAm(ids []types.ObjectID) error {
-	for i := 0; i < len(ids) && d.len() > 0; i++ {
-		obj, err := d.AppData()
-		// Issue decoding data
-		if err != nil {
-			return err
-		}
+func (enc *Encoder) IAm(id types.IAm) error {
+	enc.AppData(id.ID)
+	enc.AppData(id.MaxApdu)
+	enc.AppData(id.Segmentation)
+	enc.AppData(id.Vendor)
+	return enc.Error()
+}
 
-		// Check type we receive
-		switch t := obj.(type) {
-		case types.ObjectID:
-			ids[i] = t
-		default:
-			return fmt.Errorf("Expected type ObjectID, received a %T", t)
-		}
+func (d *Decoder) IAm(id *types.IAm) error {
+	objID, err := d.AppData()
+	if err != nil {
+		return err
 	}
-	return nil
+	if i, ok := objID.(types.ObjectID); ok {
+		id.ID = i
+	}
+
+	maxapdu, _ := d.AppData()
+	if m, ok := maxapdu.(uint32); ok {
+		id.MaxApdu = m
+	}
+
+	segmentation, _ := d.AppData()
+	if m, ok := segmentation.(uint32); ok {
+		id.Segmentation = types.Enumerated(m)
+	}
+
+	vendor, _ := d.AppData()
+	if v, ok := vendor.(uint32); ok {
+		id.Vendor = v
+	}
+
+	return d.Error()
 }

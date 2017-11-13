@@ -168,6 +168,50 @@ func TestIAmRealData(t *testing.T) {
 }
 
 func TestIAm(t *testing.T) {
+	iam := bactype.IAm{
+		MaxApdu: 1234,
+		ID: bactype.ObjectID{
+			Instance: 401,
+			Type:     17,
+		},
+		Segmentation: 100,
+		Vendor:       413,
+	}
+
+	enc := NewEncoder()
+	err := enc.IAm(iam)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	dec := NewDecoder(enc.Bytes())
+
+	var after bactype.IAm
+	err = dec.IAm(&after)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	equal := reflect.DeepEqual(iam, after)
+	if !equal {
+		t.Errorf("Encoding/Decoding Failed: %v does not equal %v", iam, after)
+	}
+
+}
+
+func TestRealDataIAm(t *testing.T) {
+	raw := []byte{196, 2, 0, 4, 210, 34, 5, 196, 145, 3, 34, 1, 4}
+	dec := NewDecoder(raw)
+	var out bactype.IAm
+	err := dec.IAm(&out)
+	t.Logf("%v", out)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+/*
+func TestIAm(t *testing.T) {
 	ids := []bactype.ObjectID{
 		bactype.ObjectID{Instance: 1, Type: 5},
 		bactype.ObjectID{Instance: 99, Type: 6},
@@ -190,3 +234,4 @@ func TestIAm(t *testing.T) {
 	}
 
 }
+*/
