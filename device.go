@@ -32,12 +32,9 @@ License.
 package gobacnet
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"net"
 
-	"github.com/alexbeltran/gobacnet/encoding"
 	"github.com/alexbeltran/gobacnet/tsm"
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
@@ -128,25 +125,18 @@ func NewClient(inter string, port int) (*Client, error) {
 }
 
 func (c *Client) LocalAddress() (la bactype.Address, err error) {
-	uni, err := c.Interface.Addrs()
-	if err != nil {
-		return
-	}
-
-	if len(uni) == 0 {
-		err = fmt.Errorf("interface %s has no addresses", c.Interface.Name)
-		return
-	}
 	ip, _, _ := net.ParseCIDR(c.MyAddress)
-
-	buff := bytes.NewBuffer([]byte(ip))
-	binary.Write(buff, encoding.EncodingEndian, c.Port)
-
-	la.Adr = buff.Bytes()
+	ad := ip.To4()
+	udp := net.UDPAddr{
+		IP:   ad,
+		Port: c.Port,
+	}
+	la = bactype.UDPToAddress(&udp)
 	return la, nil
 }
 
 func (c *Client) LocalUDPAddress() (*net.UDPAddr, error) {
-	netstr := fmt.Sprintf("%s:%d", "0.0.0.0", c.Port)
+	ip, _, _ := net.ParseCIDR(c.MyAddress)
+	netstr := fmt.Sprintf("%s:%d", ip.String(), c.Port)
 	return net.ResolveUDPAddr("udp4", netstr)
 }
