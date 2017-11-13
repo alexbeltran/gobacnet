@@ -32,7 +32,6 @@ License.
 package utsm
 
 import (
-	"bytes"
 	"context"
 	"sync"
 	"time"
@@ -46,7 +45,7 @@ type subscriber struct {
 	lastReceivedTimeout time.Duration
 	lastReceived        time.Time
 	// Data channel is used for data transfer between subscriber and publisher
-	data  chan []byte
+	data  chan interface{}
 	mutex *sync.Mutex
 }
 
@@ -82,8 +81,8 @@ func (s *subscriber) getTimeout() time.Duration {
 }
 
 // Subscribe receives data meant for ids that fall between the start and end range.
-func (m *Manager) Subscribe(start int, end int, options ...SubscriberOption) ([]byte, error) {
-	var buff bytes.Buffer
+func (m *Manager) Subscribe(start int, end int, options ...SubscriberOption) ([]interface{}, error) {
+	var store []interface{}
 	s := m.newSubscriber(start, end, options)
 	defer m.removeSubscriber(s)
 
@@ -96,9 +95,9 @@ func (m *Manager) Subscribe(start int, end int, options ...SubscriberOption) ([]
 
 		select {
 		case <-c.Done():
-			return buff.Bytes(), nil
+			return store, nil
 		case b := <-s.data:
-			buff.Write(b)
+			store = append(store, b)
 		}
 	}
 }

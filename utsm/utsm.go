@@ -90,7 +90,7 @@ func DefaultSubscriberLastReceivedTimeout(timeout time.Duration) ManagerOption {
 	}
 }
 
-func (m *Manager) Publish(id int, data []byte) {
+func (m *Manager) Publish(id int, data interface{}) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
@@ -110,7 +110,7 @@ func (m *Manager) newSubscriber(start int, end int, options []SubscriberOption) 
 		start:        start,
 		end:          end,
 		lastReceived: time.Now(),
-		data:         make(chan []byte, 1),
+		data:         make(chan interface{}, 1),
 		mutex:        &sync.Mutex{},
 	}
 	m.mutex.Lock()
