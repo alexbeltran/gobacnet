@@ -37,6 +37,7 @@ import (
 
 	"github.com/alexbeltran/gobacnet/tsm"
 	bactype "github.com/alexbeltran/gobacnet/types"
+	"github.com/alexbeltran/gobacnet/utsm"
 )
 
 const DefaultStateSize = 20
@@ -47,6 +48,7 @@ type Client struct {
 	BroadcastAddress net.IP
 	Port             int
 	tsm              *tsm.TSM
+	utsm             *utsm.Manager
 	listener         *net.UDPConn
 }
 
@@ -108,6 +110,7 @@ func NewClient(inter string, port int) (*Client, error) {
 	c.BroadcastAddress = broadcast
 
 	c.tsm = tsm.New(DefaultStateSize)
+	c.utsm = utsm.NewManager()
 	udp, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", c.Port))
 	conn, err := net.ListenUDP("udp", udp)
 	if err != nil {
