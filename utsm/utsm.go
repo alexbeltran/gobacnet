@@ -93,7 +93,7 @@ func (m *Manager) Publish(id int, data interface{}) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	for i, s := range m.subs {
+	for _, s := range m.subs {
 		if id >= s.start && id <= s.end {
 			s.mutex.Lock()
 			s.lastReceived = time.Now()
