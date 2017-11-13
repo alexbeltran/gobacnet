@@ -15,7 +15,6 @@ package cmd
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 
@@ -28,6 +27,7 @@ var Interface string
 var Port int
 var startRange int
 var endRange int
+var outputFilename string
 
 // whoIsCmd represents the whoIs command
 var whoIsCmd = &cobra.Command{
@@ -42,12 +42,6 @@ to quickly create a Cobra application.`,
 	Run: main,
 }
 
-func hexprint(arr []uint8) {
-	for i := 0; i < len(arr); i = i + 2 {
-		fmt.Printf("%x%x", arr[i], arr[i+1])
-	}
-}
-
 func main(cmd *cobra.Command, args []string) {
 	c, err := gobacnet.NewClient(Interface, Port)
 	if err != nil {
@@ -60,10 +54,17 @@ func main(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	hexprint(ids[0].Addr.Mac)
-
+	ioWriter := os.Stdout
+	// Check to see if a file was passed to us
+	if len(outputFilename) > 0 {
+		ioWriter, err = os.Create(outputFilename)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer ioWriter.Close()
+	}
 	// Pretty Print!
-	w := json.NewEncoder(os.Stdout)
+	w := json.NewEncoder(ioWriter)
 	w.SetIndent("", "    ")
 	w.Encode(ids)
 
@@ -75,4 +76,5 @@ func init() {
 	whoIsCmd.Flags().IntVarP(&Port, "port", "p", int(0xBAC0), "Port")
 	whoIsCmd.Flags().IntVarP(&startRange, "start", "s", -1, "Start range of discovery")
 	whoIsCmd.Flags().IntVarP(&endRange, "end", "e", int(0xBAC0), "End range of discovery")
+	whoIsCmd.Flags().StringVarP(&outputFilename, "out", "o", "", "Output results into the given filename in json structure.")
 }
