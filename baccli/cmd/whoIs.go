@@ -9,8 +9,7 @@
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// See the License for the specific language governing permissions and // limitations under the License.
 
 package cmd
 
@@ -25,6 +24,8 @@ import (
 // Flags
 var Interface string
 var Port int
+var startRange int
+var endRange int
 
 // whoIsCmd represents the whoIs command
 var whoIsCmd = &cobra.Command{
@@ -44,7 +45,8 @@ func main(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = c.WhoIs(1000, 4000)
+
+	err = c.WhoIs(startRange, endRange)
 	log.Println("WHO IS!")
 	if err != nil {
 		log.Fatal(err)
@@ -58,14 +60,6 @@ func init() {
 	RootCmd.AddCommand(whoIsCmd)
 	whoIsCmd.Flags().StringVarP(&Interface, "interface", "i", "eth0", "Interface e.g. eth0")
 	whoIsCmd.Flags().IntVarP(&Port, "port", "p", int(0xBAC0), "Port")
-
-	// Here you will define your flags and configuration settings.
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// whoIsCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// whoIsCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	whoIsCmd.Flags().IntVarP(&startRange, "start", "s", -1, "Start range of discovery")
+	whoIsCmd.Flags().IntVarP(&endRange, "end", "e", int(0xBAC0), "End range of discovery")
 }
