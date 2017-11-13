@@ -95,8 +95,13 @@ func (c *Client) handleMsg(b []byte) {
 				for _, id := range ids {
 					log.Printf("Instance: %d, Type: %d", id.Instance, id.Type)
 				}
+			} else if apdu.UnconfirmedService == bactype.ServiceUnconfirmedWhoIs {
+				dec := encoding.NewDecoder(apdu.RawData)
+				var low, high int32
+				dec.WhoIs(&low, &high)
+				log.Printf("WHO IS Request Low: %d, High:%d", low, high)
 			} else {
-				log.Printf("Unconfirmed: %d", apdu.UnconfirmedService)
+				log.Printf("Unconfirmed: %d %v", apdu.UnconfirmedService, apdu.RawData)
 			}
 		case bactype.ComplexAck:
 			err := c.tsm.Send(int(apdu.InvokeId), send)
@@ -128,6 +133,7 @@ func (c *Client) listen() error {
 		b := make([]byte, 1024)
 		i, _, err := c.listener.ReadFrom(b)
 		if err != nil {
+			log.Println(err)
 			continue
 		}
 		go c.handleMsg(b[:i])

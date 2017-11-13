@@ -41,21 +41,25 @@ import (
 func (c *Client) WhoIs(low, high int) error {
 	dest := types.UDPToAddress(&net.UDPAddr{
 		IP:   c.BroadcastAddress,
-		Port: c.Port,
+		Port: DefaultPort,
 	})
+	src, _ := c.LocalAddress()
+
 	dest.SetBroadcast(true)
 
 	enc := encoding.NewEncoder()
-	enc.NPDU(types.NPDU{
+	npdu := types.NPDU{
 		Version:               types.ProtocolVersion,
 		Destination:           &dest,
+		Source:                &src,
 		IsNetworkLayerMessage: false,
 
 		// We are not expecting a direct reply from a single destination
 		ExpectingReply: false,
 		Priority:       types.Normal,
 		HopCount:       types.DefaultHopCount,
-	})
+	}
+	enc.NPDU(npdu)
 
 	err := enc.WhoIs(int32(low), int32(high))
 	if err != nil {

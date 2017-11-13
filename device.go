@@ -108,12 +108,8 @@ func NewClient(inter string, port int) (*Client, error) {
 	c.BroadcastAddress = broadcast
 
 	c.tsm = tsm.New(DefaultStateSize)
-
-	src, err := c.LocalUDPAddress()
-	if err != nil {
-		return nil, err
-	}
-	conn, err := net.ListenUDP("udp", src)
+	udp, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", c.Port))
+	conn, err := net.ListenUDP("udp", udp)
 	if err != nil {
 		return nil, err
 	}
