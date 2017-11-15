@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
@@ -29,12 +30,11 @@ import (
 
 // Flags
 var (
-	deviceID        int
-	objectID        int
-	objectType      int
-	propertyTypeStr string
-	propertyType    int
-	listProperties  bool
+	deviceID       int
+	objectID       int
+	objectType     int
+	propertyType   string
+	listProperties bool
 )
 
 // readpropCmd represents the readprop command
@@ -106,12 +106,11 @@ func readProp(cmd *cobra.Command, args []string) {
 	dest := &resp[0]
 
 	var propInt uint32
-	if len(propertyTypeStr) > 0 {
-		propInt, err = property.Get(propertyTypeStr)
-	} else if (propertyType) != -1 {
-		propInt = uint32(propertyType)
+	// Check to see if an int was passed
+	if i, err := strconv.Atoi(propertyType); err == nil {
+		propInt = uint32(i)
 	} else {
-		log.Fatalf("A property type is necessary.")
+		propInt, err = property.Get(propertyType)
 	}
 
 	if property.IsDeviceProperty(propInt) {
@@ -152,7 +151,9 @@ func init() {
 	readpropCmd.Flags().IntVarP(&deviceID, "device", "d", 1234, "device id")
 	readpropCmd.Flags().IntVarP(&objectID, "objectID", "o", 1234, "object ID")
 	readpropCmd.Flags().IntVarP(&objectType, "objectType", "j", 8, "object type")
-	readpropCmd.Flags().StringVarP(&propertyTypeStr, "property", "t", property.ObjectNameStr, "type of read that will be done")
+	readpropCmd.Flags().StringVarP(&propertyType, "property", "t",
+		property.ObjectNameStr, "type of read that will be done. Support both"+
+			"the property type as an integer or as a string. Run --list to see available"+
+			"properties.")
 	readpropCmd.Flags().BoolVarP(&listProperties, "list", "l", false, "list all properties")
-	readpropCmd.Flags().IntVar(&propertyType, "intProperty", -1, "Uses raw integer property lookup. E.g. Property Present Value is 85")
 }
