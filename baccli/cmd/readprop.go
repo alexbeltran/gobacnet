@@ -40,13 +40,13 @@ var (
 // readpropCmd represents the readprop command
 var readpropCmd = &cobra.Command{
 	Use:   "readprop",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "Prints out a device's object's property",
+	Long: `
+ Given a device's object instance and selected property, we print the value
+ stored there. There are some autocomplete features to try and minimize the
+ amount of arguments that need to be passed, but do take into consideration
+ this discovery process may cause longer reads.
+	`,
 	Run: readProp,
 }
 
@@ -147,13 +147,20 @@ func readProp(cmd *cobra.Command, args []string) {
 	log.Println(out.Object.Properties[0].Data)
 }
 func init() {
+	// Descriptions are kept separate for legibility purposes.
+	propertyTypeDescr := `type of read that will be done. Support both the
+	property type as an integer or as a string. e.g. ObjectName or 77 are both
+	support. Run --list to see available properties.`
+	listPropertiesDescr := `list all string versions of properties that are
+	support by property flag`
+
 	RootCmd.AddCommand(readpropCmd)
 	readpropCmd.Flags().IntVarP(&deviceID, "device", "d", 1234, "device id")
 	readpropCmd.Flags().IntVarP(&objectID, "objectID", "o", 1234, "object ID")
 	readpropCmd.Flags().IntVarP(&objectType, "objectType", "j", 8, "object type")
 	readpropCmd.Flags().StringVarP(&propertyType, "property", "t",
-		property.ObjectNameStr, "type of read that will be done. Support both"+
-			"the property type as an integer or as a string. Run --list to see available"+
-			"properties.")
-	readpropCmd.Flags().BoolVarP(&listProperties, "list", "l", false, "list all properties")
+		property.ObjectNameStr, propertyTypeDescr)
+
+	readpropCmd.Flags().BoolVarP(&listProperties, "list", "l", false,
+		listPropertiesDescr)
 }
