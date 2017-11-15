@@ -174,7 +174,23 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 			var err error
 			// We subtract one to ignore the closing tag.
 			prop.DataLen = d.buff.Len() - 1
-			prop.Data, err = d.AppData()
+			datalist := make([]interface{}, 0)
+
+			// There is a closing tag of size 1 byte that we ignore which is why we are
+			// looping until the length is greater than 1
+			for i := 0; d.buff.Len() > 1; i++ {
+				data, err := d.AppData()
+				if err != nil {
+					return err
+				}
+				datalist = append(datalist, data)
+			}
+			prop.Data = datalist
+
+			// If we only have one value in the list, lets just return that value
+			if len(datalist) == 1 {
+				prop.Data = datalist[0]
+			}
 			if err != nil {
 				return err
 			}
