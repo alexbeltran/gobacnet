@@ -60,3 +60,13 @@ func Get(s string) (uint32, error) {
 	err := fmt.Errorf("%s is not a valid property.", s)
 	return 0, err
 }
+
+// The bool in the map doesn't actually matter since it won't be used.
+var deviceProperties = map[uint32]bool{
+	ObjectList: true,
+}
+
+func IsDeviceProperty(id uint32) bool {
+	_, ok := deviceProperties[id]
+	return ok
+}
