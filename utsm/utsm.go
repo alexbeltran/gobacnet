@@ -32,7 +32,6 @@ License.
 package utsm
 
 import (
-	"log"
 	"sync"
 	"time"
 )
@@ -90,13 +89,12 @@ func DefaultSubscriberLastReceivedTimeout(timeout time.Duration) ManagerOption {
 	}
 }
 
-func (m *Manager) Publish(id int, data []byte) {
+func (m *Manager) Publish(id int, data interface{}) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
 
-	for i, s := range m.subs {
+	for _, s := range m.subs {
 		if id >= s.start && id <= s.end {
-			log.Printf("%d", i)
 			s.mutex.Lock()
 			s.lastReceived = time.Now()
 			s.data <- data
@@ -110,7 +108,7 @@ func (m *Manager) newSubscriber(start int, end int, options []SubscriberOption) 
 		start:        start,
 		end:          end,
 		lastReceived: time.Now(),
-		data:         make(chan []byte, 1),
+		data:         make(chan interface{}, 1),
 		mutex:        &sync.Mutex{},
 	}
 	m.mutex.Lock()

@@ -38,29 +38,64 @@ import (
 	"github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) WhoIs(low, high int) error {
+func (c *Client) WhoIs(low, high int) ([]types.IAm, error) {
 	dest := types.UDPToAddress(&net.UDPAddr{
 		IP:   c.BroadcastAddress,
-		Port: c.Port,
+		Port: DefaultPort,
 	})
+	src, _ := c.LocalAddress()
+
 	dest.SetBroadcast(true)
 
 	enc := encoding.NewEncoder()
-	enc.NPDU(types.NPDU{
+	npdu := types.NPDU{
 		Version:               types.ProtocolVersion,
 		Destination:           &dest,
+		Source:                &src,
 		IsNetworkLayerMessage: false,
 
 		// We are not expecting a direct reply from a single destination
 		ExpectingReply: false,
 		Priority:       types.Normal,
 		HopCount:       types.DefaultHopCount,
-	})
+	}
+	enc.NPDU(npdu)
 
 	err := enc.WhoIs(int32(low), int32(high))
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	// Subscribe to any changes in the the range. If it is a broadcast,
+	var start, end int
+	if low == -1 || high == -1 {
+		start = 0
+		end = 0xFFFFFFFF
+	}
+
 	_, err = c.Send(dest, enc.Bytes())
-	return err
+	if err != nil {
+		return nil, err
+	}
+	values, err := c.utsm.Subscribe(start, end)
+
+	// Weed out values that are not important such as non object type
+	// and that are not
+	uniqueMap := make(map[uint32]types.IAm)
+	uniqueList := make([]types.IAm, len(uniqueMap))
+	for _, v := range values {
+		r, ok := v.(types.IAm)
+
+		// Skip non I AM responses
+		if !ok {
+			continue
+		}
+
+		// Check to see if we are in the map before inserting
+		if _, ok := uniqueMap[r.ID.Instance]; !ok {
+			uniqueMap[r.ID.Instance] = r
+			uniqueList = append(uniqueList, r)
+		}
+	}
+	return uniqueList, err
 }

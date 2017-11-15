@@ -1,1 +1,4 @@
 *.test
+baccli/baccli
+.DS_Store
+*.json

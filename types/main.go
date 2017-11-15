@@ -33,9 +33,10 @@ package types
 
 import (
 	"fmt"
-	"log"
 	"net"
 )
+
+type Enumerated uint32
 
 type ObjectID struct {
 	Type     uint16
@@ -73,6 +74,14 @@ type Address struct {
 	MacLen uint8
 	Mac    []uint8
 	Adr    []uint8
+}
+
+type IAm struct {
+	ID           ObjectID
+	MaxApdu      uint32
+	Segmentation Enumerated
+	Vendor       uint32
+	Addr         Address
 }
 
 const broadcastNetwork uint16 = 0xFFFF
@@ -127,20 +136,18 @@ func (a *Address) UDPAddr() (net.UDPAddr, error) {
 func UDPToAddress(n *net.UDPAddr) Address {
 	a := Address{}
 	p := uint16(n.Port)
-	log.Println("ROCESSING")
-	log.Printf("IP: %v ", n.IP)
 
 	// Length of IP plus the port
-	length := 4 + 2
+	length := net.IPv4len + 2
 	a.Mac = make([]uint8, length)
 	//Encode ip
-	for i := range n.IP {
+	for i := 0; i < net.IPv4len; i++ {
 		a.Mac[i] = n.IP[i]
 	}
 
 	// Encode port
-	a.Mac[len(n.IP)+0] = uint8(p >> 8)
-	a.Mac[len(n.IP)+1] = uint8(p & 0x00FF)
+	a.Mac[net.IPv4len+0] = uint8(p >> 8)
+	a.Mac[net.IPv4len+1] = uint8(p & 0x00FF)
 
 	a.MacLen = uint8(length)
 	return a

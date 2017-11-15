@@ -33,6 +33,7 @@ package gobacnet
 
 import (
 	"log"
+	"net"
 
 	"github.com/alexbeltran/gobacnet/encoding"
 	bactype "github.com/alexbeltran/gobacnet/types"
@@ -48,7 +49,7 @@ func (c *Client) Close() {
 	c.listener = nil
 }
 
-func (c *Client) handleMsg(b []byte) {
+func (c *Client) handleMsg(src *net.UDPAddr, b []byte) {
 	var header bactype.BVLC
 	var npdu bactype.NPDU
 	var apdu bactype.APDU
@@ -84,19 +85,29 @@ func (c *Client) handleMsg(b []byte) {
 		switch apdu.DataType {
 		case bactype.UnconfirmedServiceRequest:
 			if apdu.UnconfirmedService == bactype.ServiceUnconfirmedIAm {
-				log.Printf("I AM:%v", apdu.RawData)
 				dec = encoding.NewDecoder(apdu.RawData)
-				ids := make([]bactype.ObjectID, 1, 64)
-				err = dec.IAm(ids)
+				var iam bactype.IAm
+
+				err = dec.IAm(&iam)
+
+				// For whatever reason, the IP section won't be populated until
+				// we set the type.
+				src.IP = src.IP.To4()
+				iam.Addr = bactype.UDPToAddress(src)
 				if err != nil {
 					log.Print(err)
 					return
 				}
-				for _, id := range ids {
-					log.Printf("Instance: %d, Type: %d", id.Instance, id.Type)
-				}
+				c.utsm.Publish(int(iam.ID.Instance), iam)
+			} else if apdu.UnconfirmedService == bactype.ServiceUnconfirmedWhoIs {
+
+				dec := encoding.NewDecoder(apdu.RawData)
+				var low, high int32
+				dec.WhoIs(&low, &high)
+				log.Printf("WHO IS Request Low: %d, High:%d", low, high)
+				// For now we are going to ignore who is request.
 			} else {
-				log.Printf("Unconfirmed: %d", apdu.UnconfirmedService)
+				log.Printf("Unconfirmed: %d %v", apdu.UnconfirmedService, apdu.RawData)
 			}
 		case bactype.ComplexAck:
 			err := c.tsm.Send(int(apdu.InvokeId), send)
@@ -126,11 +137,12 @@ func (c *Client) handleMsg(b []byte) {
 func (c *Client) listen() error {
 	for c.listener != nil {
 		b := make([]byte, 1024)
-		i, _, err := c.listener.ReadFrom(b)
+		i, adr, err := c.listener.ReadFromUDP(b)
 		if err != nil {
+			log.Println(err)
 			continue
 		}
-		go c.handleMsg(b[:i])
+		go c.handleMsg(adr, b[:i])
 	}
 	return nil
 }

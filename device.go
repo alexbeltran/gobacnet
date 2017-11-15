@@ -32,15 +32,12 @@ License.
 package gobacnet
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
-	"log"
 	"net"
 
-	"github.com/alexbeltran/gobacnet/encoding"
 	"github.com/alexbeltran/gobacnet/tsm"
 	bactype "github.com/alexbeltran/gobacnet/types"
+	"github.com/alexbeltran/gobacnet/utsm"
 )
 
 const DefaultStateSize = 20
@@ -51,6 +48,7 @@ type Client struct {
 	BroadcastAddress net.IP
 	Port             int
 	tsm              *tsm.TSM
+	utsm             *utsm.Manager
 	listener         *net.UDPConn
 }
 
@@ -87,21 +85,34 @@ func NewClient(inter string, port int) (*Client, error) {
 	if len(uni) == 0 {
 		return c, fmt.Errorf("interface %s has no addresses", inter)
 	}
-	c.MyAddress = uni[0].String()
 
-	broadcast, err := getBroadcast(uni[0].String())
+	// Clear out the value
+	c.MyAddress = ""
+	// Find the first IP4 ip
+	for _, adr := range uni {
+		IP, _, _ := net.ParseCIDR(adr.String())
+
+		// To4 is non nil when the type is ip4
+		if IP.To4() != nil {
+			c.MyAddress = adr.String()
+			break
+		}
+	}
+	if len(c.MyAddress) == 0 {
+		// We couldn't find a interface or all of them are ip6
+		return nil, fmt.Errorf("No valid broadcasting address was found on interface %s", inter)
+	}
+
+	broadcast, err := getBroadcast(c.MyAddress)
 	if err != nil {
 		return c, err
 	}
 	c.BroadcastAddress = broadcast
 
 	c.tsm = tsm.New(DefaultStateSize)
-
-	src, err := c.LocalUDPAddress()
-	if err != nil {
-		return nil, err
-	}
-	conn, err := net.ListenUDP("udp", src)
+	c.utsm = utsm.NewManager()
+	udp, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", c.Port))
+	conn, err := net.ListenUDP("udp", udp)
 	if err != nil {
 		return nil, err
 	}
@@ -113,26 +124,18 @@ func NewClient(inter string, port int) (*Client, error) {
 }
 
 func (c *Client) LocalAddress() (la bactype.Address, err error) {
-	uni, err := c.Interface.Addrs()
-	if err != nil {
-		return
-	}
-
-	if len(uni) == 0 {
-		err = fmt.Errorf("interface %s has no addresses", c.Interface.Name)
-		return
-	}
 	ip, _, _ := net.ParseCIDR(c.MyAddress)
-
-	buff := bytes.NewBuffer([]byte(ip))
-	binary.Write(buff, encoding.EncodingEndian, c.Port)
-
-	la.Adr = buff.Bytes()
+	ad := ip.To4()
+	udp := net.UDPAddr{
+		IP:   ad,
+		Port: c.Port,
+	}
+	la = bactype.UDPToAddress(&udp)
 	return la, nil
 }
 
 func (c *Client) LocalUDPAddress() (*net.UDPAddr, error) {
-	netstr := fmt.Sprintf("%s:%d", "0.0.0.0", c.Port)
-	log.Printf(netstr)
+	ip, _, _ := net.ParseCIDR(c.MyAddress)
+	netstr := fmt.Sprintf("%s:%d", ip.String(), c.Port)
 	return net.ResolveUDPAddr("udp4", netstr)
 }
