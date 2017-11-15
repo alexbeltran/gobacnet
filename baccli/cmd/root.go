@@ -24,6 +24,8 @@ import (
 )
 
 var cfgFile string
+var Interface string
+var Port int
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -56,6 +58,8 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.baccli.yaml)")
+	RootCmd.PersistentFlags().StringVarP(&Interface, "interface", "i", "eth0", "Interface e.g. eth0")
+	RootCmd.PersistentFlags().IntVarP(&Port, "port", "p", int(0xBAC0), "Port")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
