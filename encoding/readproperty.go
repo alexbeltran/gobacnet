@@ -103,9 +103,7 @@ func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData)
 	e.openingTag(tagID)
 	tagID++
 	prop := data.Object.Properties[0]
-	for _, d := range prop.Data {
-		e.write(d)
-	}
+	e.AppData(prop.Data)
 	e.closingTag(tagID)
 	return e.Error()
 }
@@ -173,10 +171,13 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 		}
 
 		if openTag == 3 {
+			var err error
 			// We subtract one to ignore the closing tag.
 			prop.DataLen = d.buff.Len() - 1
-			prop.Data = make([]byte, d.buff.Len()-1)
-			d.decode(prop.Data)
+			prop.Data, err = d.AppData()
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		prop.ArrayIndex = ArrayAll
