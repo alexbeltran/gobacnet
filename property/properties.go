@@ -3,6 +3,7 @@ package property
 import "fmt"
 
 const (
+	Description      uint32 = 28
 	FileSize         uint32 = 42
 	FileType         uint32 = 43
 	ModelName        uint32 = 70
@@ -16,11 +17,13 @@ const (
 )
 
 const (
-	ObjectNameStr = "ObjectName"
+	DescriptionStr = "Description"
+	ObjectNameStr  = "ObjectName"
 )
 
 // enumMapping should be treated as read only.
 var enumMapping = map[string]uint32{
+	DescriptionStr:     Description,
 	"FileSize":         FileSize,
 	"FileType":         FileType,
 	"ModelName":        ModelName,

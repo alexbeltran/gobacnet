@@ -18,12 +18,20 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/spf13/viper"
+
 	"github.com/alexbeltran/gobacnet"
+	"github.com/alexbeltran/gobacnet/property"
+	"github.com/alexbeltran/gobacnet/types"
 	"github.com/spf13/cobra"
 )
 
 // Flags
 var deviceID int
+var objectID int
+var objectType int
+var propertyTypeStr string
+var propertyType int
 
 // readpropCmd represents the readprop command
 var readpropCmd = &cobra.Command{
@@ -40,38 +48,71 @@ to quickly create a Cobra application.`,
 
 func readProp(cmd *cobra.Command, args []string) {
 	fmt.Println("readprop called")
-	c, err := gobacnet.NewClient(Interface, Port)
+	c, err := gobacnet.NewClient(viper.GetString("interface"), viper.GetInt("port"))
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer c.Close()
 
 	// We need the actual address of the device first.
-	resp, err := c.WhoIs(deviceID-1, deviceID+1)
+	resp, err := c.WhoIs(deviceID, deviceID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println(resp)
 
-	//	rp := types.ReadPropertyData{
-	//		Object: types.Object{
-	//			ID: types.ObjectID{
-	//				Type:     0,
-	//				Instance: 1,
-	//			},
-	//			Properties: []types.Property{
-	//				types.Property{
-	//					Type:       85, // Present value
-	//					ArrayIndex: 0xFFFFFFFF,
-	//				},
-	//			},
-	//		},
-	//	}
-	//
-	//	dest := &types.Address{}
-	//	c.ReadProperty(dest, rp)
+	if len(resp) == 0 {
+		log.Fatal("Device id was not found on the network.")
+	}
+
+	dest := &resp[0]
+
+	var propInt uint32
+	if len(propertyTypeStr) > 0 {
+		propInt, err = property.Get(propertyTypeStr)
+	} else if (propertyType) != -1 {
+		propInt = uint32(propertyType)
+	} else {
+		log.Fatalf("A property type is necessary.")
+	}
+
+	if property.IsDeviceProperty(propInt) {
+		objectType = 8
+	}
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	rp := types.ReadPropertyData{
+		Object: types.Object{
+			ID: types.ObjectID{
+				Type:     uint16(objectType),
+				Instance: uint32(objectID),
+			},
+			Properties: []types.Property{
+				types.Property{
+					Type:       propInt,
+					ArrayIndex: 0xFFFFFFFF,
+				},
+			},
+		},
+	}
+	log.Printf("Getting ID: %d Type %d Prop %d Index %d",
+		rp.Object.ID.Instance, rp.Object.ID.Type, rp.Object.Properties[0].Type,
+		rp.Object.Properties[0].ArrayIndex)
+
+	out, err := c.ReadProperty(&dest.Addr, rp)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("SUCCESS")
+	log.Println(out.Object.Properties[0].Data)
 }
 func init() {
 	RootCmd.AddCommand(readpropCmd)
 	readpropCmd.Flags().IntVarP(&deviceID, "device", "d", 1234, "device id")
+	readpropCmd.Flags().IntVarP(&objectID, "objectID", "o", 1234, "object ID")
+	readpropCmd.Flags().IntVarP(&objectType, "objectType", "j", 8, "object type")
+	readpropCmd.Flags().StringVarP(&propertyTypeStr, "property", "t", property.ObjectNameStr, "type of read that will be done")
+	readpropCmd.Flags().IntVar(&propertyType, "intProperty", -1, "Uses raw integer property lookup. E.g. Property Present Value is 85")
 }
