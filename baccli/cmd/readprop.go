@@ -17,6 +17,7 @@ package cmd
 import (
 	"fmt"
 	"log"
+	"strings"
 
 	"github.com/spf13/viper"
 
@@ -27,11 +28,14 @@ import (
 )
 
 // Flags
-var deviceID int
-var objectID int
-var objectType int
-var propertyTypeStr string
-var propertyType int
+var (
+	deviceID        int
+	objectID        int
+	objectType      int
+	propertyTypeStr string
+	propertyType    int
+	listProperties  bool
+)
 
 // readpropCmd represents the readprop command
 var readpropCmd = &cobra.Command{
@@ -46,7 +50,42 @@ to quickly create a Cobra application.`,
 	Run: readProp,
 }
 
+func longestString(x map[string]uint32) int {
+	max := 0
+	for k, _ := range x {
+		if len(k) > max {
+			max = len(k)
+		}
+	}
+	return max
+}
+
+const numOfAdditionalSpaces = 15
+
+func printRow(col1, col2 string, maxLen int) {
+	spacing := strings.Repeat(" ", maxLen-len(col1)+numOfAdditionalSpaces)
+	fmt.Printf("%s%s%s\n", col1, spacing, col2)
+}
+
+func printKeys() {
+	keys := property.Keys()
+	max := longestString(keys)
+
+	printRow("Key", "Int", max)
+	fmt.Println(strings.Repeat("-", max+numOfAdditionalSpaces+6))
+
+	for k, id := range keys {
+		// Spacing
+		printRow(k, fmt.Sprintf("%d", id), max)
+	}
+}
+
 func readProp(cmd *cobra.Command, args []string) {
+	if listProperties {
+		printKeys()
+		return
+	}
+
 	fmt.Println("readprop called")
 	c, err := gobacnet.NewClient(viper.GetString("interface"), viper.GetInt("port"))
 	if err != nil {
@@ -114,5 +153,6 @@ func init() {
 	readpropCmd.Flags().IntVarP(&objectID, "objectID", "o", 1234, "object ID")
 	readpropCmd.Flags().IntVarP(&objectType, "objectType", "j", 8, "object type")
 	readpropCmd.Flags().StringVarP(&propertyTypeStr, "property", "t", property.ObjectNameStr, "type of read that will be done")
+	readpropCmd.Flags().BoolVarP(&listProperties, "list", "l", false, "list all properties")
 	readpropCmd.Flags().IntVar(&propertyType, "intProperty", -1, "Uses raw integer property lookup. E.g. Property Present Value is 85")
 }

@@ -40,7 +40,7 @@ var enumMapping = map[string]uint32{
 var listOfKeys []string
 
 func init() {
-	listOfKeys := make([]string, len(enumMapping))
+	listOfKeys = make([]string, len(enumMapping))
 	i := 0
 	for k := range enumMapping {
 		listOfKeys[i] = k
@@ -48,11 +48,13 @@ func init() {
 	}
 }
 
-func Keys() []string {
+func Keys() map[string]uint32 {
 	// A copy is made since we do not want outside packages editing our keys by
 	// accident
-	var keys []string
-	copy(keys, listOfKeys)
+	keys := make(map[string]uint32)
+	for k, v := range enumMapping {
+		keys[k] = v
+	}
 	return keys
 }
 
