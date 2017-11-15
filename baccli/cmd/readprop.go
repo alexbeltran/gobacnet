@@ -16,9 +16,14 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 
+	"github.com/alexbeltran/gobacnet"
 	"github.com/spf13/cobra"
 )
+
+// Flags
+var deviceID int
 
 // readpropCmd represents the readprop command
 var readpropCmd = &cobra.Command{
@@ -30,11 +35,43 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("readprop called")
-	},
+	Run: readProp,
 }
 
+func readProp(cmd *cobra.Command, args []string) {
+	fmt.Println("readprop called")
+	c, err := gobacnet.NewClient(Interface, Port)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer c.Close()
+
+	// We need the actual address of the device first.
+	resp, err := c.WhoIs(deviceID-1, deviceID+1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println(resp)
+
+	//	rp := types.ReadPropertyData{
+	//		Object: types.Object{
+	//			ID: types.ObjectID{
+	//				Type:     0,
+	//				Instance: 1,
+	//			},
+	//			Properties: []types.Property{
+	//				types.Property{
+	//					Type:       85, // Present value
+	//					ArrayIndex: 0xFFFFFFFF,
+	//				},
+	//			},
+	//		},
+	//	}
+	//
+	//	dest := &types.Address{}
+	//	c.ReadProperty(dest, rp)
+}
 func init() {
 	RootCmd.AddCommand(readpropCmd)
+	readpropCmd.Flags().IntVarP(&deviceID, "device", "d", 1234, "device id")
 }
