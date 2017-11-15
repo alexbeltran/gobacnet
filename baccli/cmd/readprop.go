@@ -86,7 +86,6 @@ func readProp(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	fmt.Println("readprop called")
 	c, err := gobacnet.NewClient(viper.GetString("interface"), viper.GetInt("port"))
 	if err != nil {
 		log.Fatal(err)
@@ -135,16 +134,11 @@ func readProp(cmd *cobra.Command, args []string) {
 			},
 		},
 	}
-	log.Printf("Getting ID: %d Type %d Prop %d Index %d",
-		rp.Object.ID.Instance, rp.Object.ID.Type, rp.Object.Properties[0].Type,
-		rp.Object.Properties[0].ArrayIndex)
-
 	out, err := c.ReadProperty(&dest.Addr, rp)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("SUCCESS")
-	log.Println(out.Object.Properties[0].Data)
+	fmt.Println(out.Object.Properties[0].Data)
 }
 func init() {
 	// Descriptions are kept separate for legibility purposes.
