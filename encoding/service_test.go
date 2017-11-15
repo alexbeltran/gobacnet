@@ -116,11 +116,8 @@ func TestReadPropertyResponse(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	apd := NewDecoder(rpd.Object.Properties[0].Data)
-	x, err := apd.AppData()
-	if err != nil {
-		t.Fatal(err)
-	}
+
+	x := rpd.Object.Properties[0].Data
 	f := x.(float32)
 	if f != -5.0 {
 		t.Fatalf("Final value was not decrypted properly")

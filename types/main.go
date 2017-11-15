@@ -51,7 +51,7 @@ type Object struct {
 type Property struct {
 	Type       uint32
 	ArrayIndex uint32
-	Data       []uint8
+	Data       interface{}
 	DataLen    int
 }
 

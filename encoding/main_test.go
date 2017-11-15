@@ -258,7 +258,7 @@ func subTestReadPropertyAck(t *testing.T, rd bactype.ReadPropertyData) {
 	e := NewEncoder()
 	e.ReadPropertyAck(10, rd)
 	if err := e.Error(); err != nil {
-		t.Fatal(err)
+		t.Fatalf("Encoding: %s", err)
 	}
 
 	b := e.Bytes()
@@ -270,12 +270,13 @@ func subTestReadPropertyAck(t *testing.T, rd bactype.ReadPropertyData) {
 	var outRd bactype.ReadPropertyData
 	err := d.ReadProperty(&outRd)
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("Decoding: %s", err)
 	}
 	compareReadProperties(t, rd, outRd)
 }
 
 func TestReadAckProperty(t *testing.T) {
+	data := "Hello world!"
 	rd := bactype.ReadPropertyData{
 		Object: bactype.Object{
 			ID: bactype.ObjectID{
@@ -286,12 +287,14 @@ func TestReadAckProperty(t *testing.T) {
 				bactype.Property{
 					Type:       3921,
 					ArrayIndex: ArrayAll,
-					Data:       []byte{3, 7, 23, 5, 11},
+					Data:       data,
 				},
 			},
 		},
 	}
-	rd.Object.Properties[0].DataLen = len(rd.Object.Properties[0].Data)
+
+	// We add +2 since there needs to be space for the header information
+	rd.Object.Properties[0].DataLen = len(data) + 2
 	subTestReadPropertyAck(t, rd)
 
 	rd.Object.Properties[0].ArrayIndex = 2

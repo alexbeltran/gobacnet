@@ -103,9 +103,7 @@ func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData)
 	e.openingTag(tagID)
 	tagID++
 	prop := data.Object.Properties[0]
-	for _, d := range prop.Data {
-		e.write(d)
-	}
+	e.AppData(prop.Data)
 	e.closingTag(tagID)
 	return e.Error()
 }
@@ -173,10 +171,29 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 		}
 
 		if openTag == 3 {
+			var err error
 			// We subtract one to ignore the closing tag.
 			prop.DataLen = d.buff.Len() - 1
-			prop.Data = make([]byte, d.buff.Len()-1)
-			d.decode(prop.Data)
+			datalist := make([]interface{}, 0)
+
+			// There is a closing tag of size 1 byte that we ignore which is why we are
+			// looping until the length is greater than 1
+			for i := 0; d.buff.Len() > 1; i++ {
+				data, err := d.AppData()
+				if err != nil {
+					return err
+				}
+				datalist = append(datalist, data)
+			}
+			prop.Data = datalist
+
+			// If we only have one value in the list, lets just return that value
+			if len(datalist) == 1 {
+				prop.Data = datalist[0]
+			}
+			if err != nil {
+				return err
+			}
 		}
 	} else {
 		prop.ArrayIndex = ArrayAll

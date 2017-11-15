@@ -217,7 +217,10 @@ func (e *Encoder) AppData(i interface{}) error {
 		e.objectId(val.Type, val.Instance)
 
 	default:
-		return fmt.Errorf("Unknown type %T", i)
+		err := fmt.Errorf("Unknown type %T", i)
+		// Set global error
+		e.err = err
+		return err
 	}
 	return nil
 }
