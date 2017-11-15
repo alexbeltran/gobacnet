@@ -71,6 +71,9 @@ func (c *Client) WhoIs(low, high int) ([]types.IAm, error) {
 	if low == -1 || high == -1 {
 		start = 0
 		end = 0xFFFFFFFF
+	} else {
+		start = low
+		end = high
 	}
 
 	_, err = c.Send(dest, enc.Bytes())

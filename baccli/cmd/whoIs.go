@@ -23,8 +23,6 @@ import (
 )
 
 // Flags
-var Interface string
-var Port int
 var startRange int
 var endRange int
 var outputFilename string
@@ -68,8 +66,6 @@ func main(cmd *cobra.Command, args []string) {
 
 func init() {
 	RootCmd.AddCommand(whoIsCmd)
-	whoIsCmd.Flags().StringVarP(&Interface, "interface", "i", "eth0", "Interface e.g. eth0")
-	whoIsCmd.Flags().IntVarP(&Port, "port", "p", int(0xBAC0), "Port")
 	whoIsCmd.Flags().IntVarP(&startRange, "start", "s", -1, "Start range of discovery")
 	whoIsCmd.Flags().IntVarP(&endRange, "end", "e", int(0xBAC0), "End range of discovery")
 	whoIsCmd.Flags().StringVarP(&outputFilename, "out", "o", "", "Output results into the given filename in json structure.")
