@@ -64,6 +64,10 @@ func init() {
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+
+	// We want to allow this to be accessed
+	viper.BindPFlag("interface", RootCmd.PersistentFlags().Lookup("interface"))
+	viper.BindPFlag("port", RootCmd.PersistentFlags().Lookup("port"))
 }
 
 // initConfig reads in config file and ENV variables if set.
