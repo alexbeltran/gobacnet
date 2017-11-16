@@ -120,7 +120,7 @@ func init() {
 	RootCmd.AddCommand(readpropCmd)
 
 	// Pass flags to children
-	readpropCmd.Flags().IntVarP(&deviceID, "device", "d", 1234, "device id")
+	readpropCmd.PersistentFlags().IntVarP(&deviceID, "device", "d", 1234, "device id")
 	readpropCmd.Flags().IntVarP(&objectID, "objectID", "o", 1234, "object ID")
 	readpropCmd.Flags().IntVarP(&objectType, "objectType", "j", 8, "object type")
 	readpropCmd.Flags().StringVarP(&propertyType, "property", "t",
