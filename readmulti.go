@@ -33,7 +33,6 @@ package gobacnet
 
 import (
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/alexbeltran/gobacnet/encoding"
@@ -84,7 +83,6 @@ func (c *Client) ReadMultiProperty(dest *bactype.Address, rp bactype.ReadMultipl
 
 		var apdu bactype.APDU
 		dec.APDU(&apdu)
-		log.Println(dec.Bytes())
 		err = dec.ReadMultiplePropertyAck(&out)
 		if err != nil {
 			return bactype.ReadMultipleProperty{}, err

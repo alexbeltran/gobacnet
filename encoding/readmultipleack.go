@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"fmt"
-	"log"
 
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
@@ -96,7 +95,6 @@ func (d *Decoder) bacError(errorClass, errorCode *uint32) error {
 
 func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 	obj := bactype.Object{}
-	log.Println(d.buff.Bytes())
 	for d.Error() == nil && d.len() > 0 {
 		obj.Properties = []bactype.Property{}
 
