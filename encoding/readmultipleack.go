@@ -63,8 +63,9 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 	return e.Error()
 }
 
-func (d *Decoder) ReadMultiplePropertyAck(invokeID uint8, data bactype.ReadMultipleProperty) error {
-	return nil
+func (d *Decoder) ReadMultiplePropertyAck(data *bactype.ReadMultipleProperty) error {
+	err := d.objectsWithData(&data.Objects)
+	return err
 }
 
 func (d *Decoder) bacError(errorClass, errorCode *uint32) error {
@@ -92,14 +93,15 @@ func (d *Decoder) bacError(errorClass, errorCode *uint32) error {
 	return nil
 }
 
-func (d *Decoder) objectsWithData(objects []bactype.Object) error {
+func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 	obj := bactype.Object{}
-	objType, instance := d.objectId()
-
 	for d.Error() == nil && d.len() > 0 {
-		tag, meta := d.tagNumber()
+		obj.Properties = []bactype.Property{}
+
 		// Tag 0 - Object ID
 		var expectedTag uint8
+		tag, meta, _ := d.tagNumberAndValue()
+		objType, instance := d.objectId()
 
 		if tag != expectedTag {
 			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
@@ -155,7 +157,14 @@ func (d *Decoder) objectsWithData(objects []bactype.Object) error {
 		if !meta.isOpening() {
 			return &ErrorWrongTagType{OpeningTag}
 		}
+		data, err := d.AppData()
+		if err != nil {
+			return err
+		}
+		prop.Data = data
+		obj.Properties = append(obj.Properties, prop)
 
+		tag, meta = d.tagNumber()
 		expectedTag = 4
 		if tag != expectedTag {
 			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
@@ -164,6 +173,7 @@ func (d *Decoder) objectsWithData(objects []bactype.Object) error {
 			return &ErrorWrongTagType{ClosingTag}
 		}
 
+		tag, meta = d.tagNumber()
 		// Tag 5 - (Optional) Error Code
 		expectedTag = 5
 		if tag == expectedTag {
@@ -175,7 +185,6 @@ func (d *Decoder) objectsWithData(objects []bactype.Object) error {
 			if !meta.isClosing() {
 				return &ErrorWrongTagType{ClosingTag}
 			}
-
 		}
 
 		// Tag 1 - Closing Tag
@@ -186,7 +195,7 @@ func (d *Decoder) objectsWithData(objects []bactype.Object) error {
 		if !meta.isClosing() {
 			return fmt.Errorf("Expecting closing tag")
 		}
-
+		*objects = append(*objects, obj)
 	}
 	return d.Error()
 }
