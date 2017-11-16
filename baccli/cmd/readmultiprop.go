@@ -102,13 +102,11 @@ func readMulti(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	log.Println("Reading multiple!")
 	x, err := c.ReadMultiProperty(&dest.Addr, rpm)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Results: ")
-	log.Println(x)
+	fmt.Println(x)
 }
 
 func init() {
