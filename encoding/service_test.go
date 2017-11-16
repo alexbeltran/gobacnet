@@ -277,19 +277,23 @@ func TestReadMultipleTwo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	log.Println(rp)
+
 	counter := 0
 	for _, obj := range rp.Objects {
-		for _, prop := range obj.Properties {
-			name, ok := prop.Data.(string)
-			if !ok {
-				t.Fatalf("Type mismatch. Type should be string, it is %T", prop.Data)
-			}
-			if strings.Compare(name, names[counter]) > 0 {
-				t.Fatalf("Object name should be \"%s\" not \"%s\"", names[counter], name)
-			}
-			counter++
-
+		prop := obj.Properties[0]
+		name, ok := prop.Data.(string)
+		if !ok {
+			t.Fatalf("Type mismatch. Type should be string, it is %T", prop.Data)
 		}
+		if strings.Compare(name, names[counter]) > 0 {
+			t.Fatalf("Object name should be \"%s\" not \"%s\"", names[counter], name)
+		}
+
+		prop = obj.Properties[1]
+		_, ok = prop.Data.(bactype.ObjectID)
+		if !ok {
+			t.Fatalf("Type mismatch. Type should be object id, it is %T", prop.Data)
+		}
+		counter++
 	}
 }

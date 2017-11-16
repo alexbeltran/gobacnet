@@ -36,6 +36,20 @@ var enumMapping = map[string]uint32{
 	"Units":            Units,
 }
 
+var strMapping = map[uint32]string{
+	Description:      "Description",
+	FileSize:         "File Size",
+	FileType:         "File Type",
+	ModelName:        "Model Name",
+	ObjectIdentifier: "Object Identifier",
+	ObjectList:       "Object List",
+	ObjectName:       "Object Name",
+	ObjectReference:  "Object Reference",
+	ObjectType:       "Object Type",
+	PresentValue:     "Present Value",
+	Units:            "Units",
+}
+
 // listOfKeys should be treated as read only after init
 var listOfKeys []string
 
@@ -64,6 +78,15 @@ func Get(s string) (uint32, error) {
 	}
 	err := fmt.Errorf("%s is not a valid property.", s)
 	return 0, err
+}
+
+// String returns a human readible string of the given property
+func String(prop uint32) string {
+	s, ok := strMapping[prop]
+	if !ok {
+		return "Unknown"
+	}
+	return fmt.Sprintf("%s (%d)", s, prop)
 }
 
 // The bool in the map doesn't actually matter since it won't be used.
