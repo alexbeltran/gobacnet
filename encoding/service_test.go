@@ -262,3 +262,34 @@ func TestReadMultiple(t *testing.T) {
 		}
 	}
 }
+
+func TestReadMultipleTwo(t *testing.T) {
+	raw := []byte{12, 2, 0, 4, 210, 30, 41, 77, 78, 117, 13, 0, 83, 105, 109, 112, 108, 101, 83,
+		101, 114, 118, 101, 114, 79, 41, 75, 78, 196, 2, 0, 4, 210, 79, 31, 12, 2, 128, 0, 0, 30, 41, 77, 78,
+		117, 7, 0, 70, 73, 76, 69, 32, 48, 79, 41, 75, 78, 196, 2, 128, 0, 0, 79, 31, 12, 2, 128, 0, 1, 30, 41,
+		77, 78, 117, 7, 0, 70, 73, 76, 69, 32, 49, 79, 41, 75, 78, 196, 2, 128, 0, 1, 79, 31, 12, 2, 128, 0, 2,
+		30, 41, 77, 78, 117, 7, 0, 70, 73, 76, 69, 32, 50, 79, 41, 75, 78, 196, 2, 128, 0, 2, 79, 31}
+	names := []string{"SimpleServer", "FILE 0", "FILE 1", "FILE 2"}
+
+	dec := NewDecoder(raw)
+	rp := bactype.ReadMultipleProperty{}
+	err := dec.ReadMultiplePropertyAck(&rp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	log.Println(rp)
+	counter := 0
+	for _, obj := range rp.Objects {
+		for _, prop := range obj.Properties {
+			name, ok := prop.Data.(string)
+			if !ok {
+				t.Fatalf("Type mismatch. Type should be string, it is %T", prop.Data)
+			}
+			if strings.Compare(name, names[counter]) > 0 {
+				t.Fatalf("Object name should be \"%s\" not \"%s\"", names[counter], name)
+			}
+			counter++
+
+		}
+	}
+}
