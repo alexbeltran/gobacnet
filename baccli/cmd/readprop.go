@@ -92,7 +92,7 @@ func readProp(cmd *cobra.Command, args []string) {
 	rp := types.ReadPropertyData{
 		Object: types.Object{
 			ID: types.ObjectID{
-				Type:     uint16(objectType),
+				Type:     types.ObjectType(objectType),
 				Instance: uint32(objectID),
 			},
 			Properties: []types.Property{
