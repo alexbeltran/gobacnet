@@ -70,7 +70,7 @@ func (c *Client) WhoIs(low, high int) ([]types.IAm, error) {
 	var start, end int
 	if low == -1 || high == -1 {
 		start = 0
-		end = 0xFFFFFFFF
+		end = maxInt
 	} else {
 		start = low
 		end = high
