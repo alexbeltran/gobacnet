@@ -37,9 +37,10 @@ import (
 )
 
 type Enumerated uint32
+type ObjectType uint16
 
 type ObjectID struct {
-	Type     uint16
+	Type     ObjectType
 	Instance uint32
 }
 

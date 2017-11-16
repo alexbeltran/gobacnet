@@ -273,7 +273,7 @@ func (d *Decoder) AppData() (interface{}, error) {
 	case tagObjectID:
 		objType, objInstance := d.objectId()
 		return bactype.ObjectID{
-			Type:     objType,
+			Type:     bactype.ObjectType(objType),
 			Instance: objInstance,
 		}, d.Error()
 	default:

@@ -2,9 +2,11 @@ package encoding
 
 import (
 	"fmt"
+
+	"github.com/alexbeltran/gobacnet/types"
 )
 
-func isValidObjectType(idType uint16) error {
+func isValidObjectType(idType types.ObjectType) error {
 	if idType > MaxObject {
 		return fmt.Errorf("Object types is %d which must be less then %d", idType, MaxObject)
 	}

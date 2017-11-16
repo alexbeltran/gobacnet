@@ -35,6 +35,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+
+	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
 // Decoder used
@@ -127,10 +129,10 @@ func (d *Decoder) tagNumberAndValue() (tag uint8, meta tagMeta, value uint32) {
 	return tag, meta, d.value(meta)
 }
 
-func (d *Decoder) objectId() (objectType uint16, instance uint32) {
+func (d *Decoder) objectId() (objectType bactype.ObjectType, instance uint32) {
 	var value uint32
 	d.decode(&value)
-	objectType = uint16((value >> InstanceBits) & MaxObject)
+	objectType = bactype.ObjectType((value >> InstanceBits) & MaxObject)
 	instance = value & MaxInstance
 	return
 }
