@@ -60,11 +60,9 @@ func isClosingTag(x uint8) bool {
 type tagMeta uint8
 
 const tagMask tagMeta = 7
-const openingMask tagMeta = 7
-const closingMask tagMeta = openingMask
+const openingMask tagMeta = 6
+const closingMask tagMeta = 7
 
-const openingBits tagMeta = 6
-const closingBits tagMeta = 7
 const extendValueBits tagMeta = 5
 
 const contextSpecificBit = 0x08
@@ -75,7 +73,7 @@ func (t *tagMeta) setClosing() {
 }
 
 func (t *tagMeta) isClosing() bool {
-	return ((*t & closingMask) == closingBits)
+	return ((*t & closingMask) == closingMask)
 }
 
 func (t *tagMeta) setOpening() {
@@ -84,7 +82,7 @@ func (t *tagMeta) setOpening() {
 }
 
 func (t *tagMeta) isOpening() bool {
-	return ((*t & openingMask) == closingMask)
+	return ((*t & openingMask) == openingMask)
 }
 
 func (t *tagMeta) Clear() {
