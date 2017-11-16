@@ -130,6 +130,10 @@ const (
 	ConfirmedServiceRequest   PDUType = 0
 	UnconfirmedServiceRequest PDUType = 0x10
 	ComplexAck                PDUType = 0x30
+	SegmentAck                PDUType = 0x40
+	Error                     PDUType = 0x50
+	Reject                    PDUType = 0x60
+	Abort                     PDUType = 0x70
 )
 
 // IsConfirmedServiceRequest checks to see if the APDU is in the list of known services

@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"strings"
 
 	"github.com/spf13/viper"
 
@@ -50,39 +49,9 @@ var readpropCmd = &cobra.Command{
 	Run: readProp,
 }
 
-func longestString(x map[string]uint32) int {
-	max := 0
-	for k, _ := range x {
-		if len(k) > max {
-			max = len(k)
-		}
-	}
-	return max
-}
-
-const numOfAdditionalSpaces = 15
-
-func printRow(col1, col2 string, maxLen int) {
-	spacing := strings.Repeat(" ", maxLen-len(col1)+numOfAdditionalSpaces)
-	fmt.Printf("%s%s%s\n", col1, spacing, col2)
-}
-
-func printKeys() {
-	keys := property.Keys()
-	max := longestString(keys)
-
-	printRow("Key", "Int", max)
-	fmt.Println(strings.Repeat("-", max+numOfAdditionalSpaces+6))
-
-	for k, id := range keys {
-		// Spacing
-		printRow(k, fmt.Sprintf("%d", id), max)
-	}
-}
-
 func readProp(cmd *cobra.Command, args []string) {
 	if listProperties {
-		printKeys()
+		property.PrintAll()
 		return
 	}
 
@@ -149,12 +118,14 @@ func init() {
 	support by property flag`
 
 	RootCmd.AddCommand(readpropCmd)
-	readpropCmd.Flags().IntVarP(&deviceID, "device", "d", 1234, "device id")
+
+	// Pass flags to children
+	readpropCmd.PersistentFlags().IntVarP(&deviceID, "device", "d", 1234, "device id")
 	readpropCmd.Flags().IntVarP(&objectID, "objectID", "o", 1234, "object ID")
 	readpropCmd.Flags().IntVarP(&objectType, "objectType", "j", 8, "object type")
 	readpropCmd.Flags().StringVarP(&propertyType, "property", "t",
 		property.ObjectNameStr, propertyTypeDescr)
 
-	readpropCmd.Flags().BoolVarP(&listProperties, "list", "l", false,
+	readpropCmd.PersistentFlags().BoolVarP(&listProperties, "list", "l", false,
 		listPropertiesDescr)
 }

@@ -52,8 +52,16 @@ func (e *Encoder) APDU(a bactype.APDU) error {
 		e.apduUnconfirmed(a)
 	case bactype.ConfirmedServiceRequest:
 		e.apduConfirmed(a)
+	case bactype.SegmentAck:
+		return fmt.Errorf("Segmented")
+	case bactype.Error:
+		return fmt.Errorf("Error")
+	case bactype.Reject:
+		return fmt.Errorf("Rejected")
+	case bactype.Abort:
+		return fmt.Errorf("Aborted")
 	default:
-		return fmt.Errorf("Unknown PDU type:%d", a.DataType)
+		return fmt.Errorf("Unknown PDU type:%d", meta.DataType)
 	}
 	return nil
 }
@@ -92,6 +100,14 @@ func (d *Decoder) APDU(a *bactype.APDU) error {
 		return d.apduUnconfirmed(a)
 	case bactype.ConfirmedServiceRequest:
 		return d.apduConfirmed(a)
+	case bactype.SegmentAck:
+		return fmt.Errorf("Segmented")
+	case bactype.Error:
+		return fmt.Errorf("Error")
+	case bactype.Reject:
+		return fmt.Errorf("Rejected")
+	case bactype.Abort:
+		return fmt.Errorf("Aborted")
 	default:
 		return fmt.Errorf("Unknown PDU type:%d", a.DataType)
 	}
