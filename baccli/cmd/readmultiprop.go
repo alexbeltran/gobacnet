@@ -15,7 +15,14 @@
 package cmd
 
 import (
+	"fmt"
+	"log"
+
+	"github.com/spf13/viper"
+
+	"github.com/alexbeltran/gobacnet"
 	"github.com/alexbeltran/gobacnet/property"
+	"github.com/alexbeltran/gobacnet/types"
 	"github.com/spf13/cobra"
 )
 
@@ -29,12 +36,79 @@ and usage of using your command. For example:
 Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
-	Run: func(cmd *cobra.Command, args []string) {
-		if listProperties {
-			property.PrintAll()
+	Run: readMulti,
+}
+
+func readMulti(cmd *cobra.Command, args []string) {
+	if listProperties {
+		property.PrintAll()
+		return
+	}
+	c, err := gobacnet.NewClient(viper.GetString("interface"), viper.GetInt("port"))
+
+	// We need the actual address of the device first.
+	resp, err := c.WhoIs(deviceID, deviceID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(resp) == 0 {
+		log.Fatal("Device id was not found on the network.")
+	}
+
+	dest := &resp[0]
+
+	rp := types.ReadPropertyData{
+		Object: types.Object{
+			ID: types.ObjectID{
+				Type:     8,
+				Instance: uint32(deviceID),
+			},
+			Properties: []types.Property{
+				types.Property{
+					Type:       property.ObjectList,
+					ArrayIndex: 0xFFFFFFFF,
+				},
+			},
+		},
+	}
+
+	out, err := c.ReadProperty(&dest.Addr, rp)
+	ids, ok := out.Object.Properties[0].Data.([]interface{})
+	if !ok {
+		fmt.Println("Unable to get object list")
+		return
+	}
+
+	rpm := types.ReadMultipleProperty{}
+	rpm.Objects = make([]types.Object, len(ids))
+	for i, raw_id := range ids {
+		id, ok := raw_id.(types.ObjectID)
+		if !ok {
+			log.Println("Unable to read object id %v", raw_id)
 			return
 		}
-	},
+		rpm.Objects[i].ID = id
+
+		rpm.Objects[i].Properties = []types.Property{
+			types.Property{
+				Type:       property.ObjectName,
+				ArrayIndex: 0xFFFFFFFF,
+			},
+			types.Property{
+				Type:       property.Description,
+				ArrayIndex: 0xFFFFFFFF,
+			},
+		}
+	}
+
+	log.Println("Reading multiple!")
+	x, err := c.ReadMultiProperty(&dest.Addr, rpm)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Println("Results: ")
+	log.Println(x)
 }
 
 func init() {
