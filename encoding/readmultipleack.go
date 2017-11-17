@@ -65,7 +65,10 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 
 func (d *Decoder) ReadMultiplePropertyAck(data *bactype.ReadMultipleProperty) error {
 	err := d.objectsWithData(&data.Objects)
-	return err
+	if err != nil {
+		d.err = err
+	}
+	return d.Error()
 }
 
 func (d *Decoder) bacError(errorClass, errorCode *uint32) error {
