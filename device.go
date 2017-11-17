@@ -34,10 +34,12 @@ package gobacnet
 import (
 	"fmt"
 	"net"
+	"time"
 
 	"github.com/alexbeltran/gobacnet/tsm"
 	bactype "github.com/alexbeltran/gobacnet/types"
 	"github.com/alexbeltran/gobacnet/utsm"
+	log "github.com/sirupsen/logrus"
 )
 
 const DefaultStateSize = 20
@@ -110,7 +112,11 @@ func NewClient(inter string, port int) (*Client, error) {
 	c.BroadcastAddress = broadcast
 
 	c.tsm = tsm.New(DefaultStateSize)
-	c.utsm = utsm.NewManager()
+	options := []utsm.ManagerOption{
+		utsm.DefaultSubscriberTimeout(time.Second * time.Duration(1)),
+		utsm.DefaultSubscriberLastReceivedTimeout(time.Second * time.Duration(1)),
+	}
+	c.utsm = utsm.NewManager(options...)
 	udp, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", c.Port))
 	conn, err := net.ListenUDP("udp", udp)
 	if err != nil {
@@ -118,7 +124,12 @@ func NewClient(inter string, port int) (*Client, error) {
 	}
 
 	c.listener = conn
+	log.SetLevel(log.ErrorLevel)
 
+	// Print out relevant information
+	log.Debug(fmt.Sprintf("Broadcast Address: %v", c.BroadcastAddress))
+	log.Debug(fmt.Sprintf("Local Address: %s", c.MyAddress))
+	log.Debug(fmt.Sprintf("Port: %x", c.Port))
 	go c.listen()
 	return c, nil
 }

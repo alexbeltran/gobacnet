@@ -43,3 +43,5 @@ const defaultMTSPMAC = 127
 // General Bacnet
 const defaultMaxMaster = 127
 const defautlMaxInfoFrames = 1
+
+const ArrayAll = 0xFFFFFFFF

@@ -53,4 +53,6 @@ const (
 	flag32bit uint8 = 255
 )
 
-const ArrayAll = 0xFFFFFFFF
+// ArrayAll is an argument typically passed during a read to signify where to
+// read
+const ArrayAll uint32 = ^uint32(0)

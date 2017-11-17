@@ -109,7 +109,7 @@ func TestReadPropertyService(t *testing.T) {
 			Properties: []types.Property{
 				types.Property{
 					Type:       85, // Present value
-					ArrayIndex: 0xFFFFFFFF,
+					ArrayIndex: ArrayAll,
 				},
 			},
 		},

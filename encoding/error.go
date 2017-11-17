@@ -1,6 +1,8 @@
 package encoding
 
-import "fmt"
+import (
+	"fmt"
+)
 
 type TagType string
 

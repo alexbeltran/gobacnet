@@ -60,7 +60,7 @@ func TestReadPropertyService(t *testing.T) {
 			Properties: []bactype.Property{
 				bactype.Property{
 					Type:       85,
-					ArrayIndex: 0xFFFFFFFF,
+					ArrayIndex: ArrayAll,
 				},
 			},
 		},

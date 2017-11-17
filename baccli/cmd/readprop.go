@@ -32,6 +32,7 @@ var (
 	deviceID       int
 	objectID       int
 	objectType     int
+	arrayIndex     uint32
 	propertyType   string
 	listProperties bool
 )
@@ -92,13 +93,13 @@ func readProp(cmd *cobra.Command, args []string) {
 	rp := types.ReadPropertyData{
 		Object: types.Object{
 			ID: types.ObjectID{
-				Type:     uint16(objectType),
+				Type:     types.ObjectType(objectType),
 				Instance: uint32(objectID),
 			},
 			Properties: []types.Property{
 				types.Property{
 					Type:       propInt,
-					ArrayIndex: 0xFFFFFFFF,
+					ArrayIndex: arrayIndex,
 				},
 			},
 		},
@@ -125,6 +126,8 @@ func init() {
 	readpropCmd.Flags().IntVarP(&objectType, "objectType", "j", 8, "object type")
 	readpropCmd.Flags().StringVarP(&propertyType, "property", "t",
 		property.ObjectNameStr, propertyTypeDescr)
+
+	readpropCmd.Flags().Uint32Var(&arrayIndex, "index", gobacnet.ArrayAll, "Which position to return.")
 
 	readpropCmd.PersistentFlags().BoolVarP(&listProperties, "list", "l", false,
 		listPropertiesDescr)
