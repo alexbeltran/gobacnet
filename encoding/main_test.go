@@ -446,3 +446,20 @@ func TestBVLC(t *testing.T) {
 	}
 
 }
+
+func TestError(t *testing.T) {
+	var npdu bactype.NPDU
+	var apdu bactype.APDU
+	raw := []byte{1, 0, 80, 1, 12, 145, 1, 145, 31}
+
+	dec := NewDecoder(raw)
+	err := dec.NPDU(&npdu)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = dec.APDU(&apdu)
+	if err != nil {
+		t.Fatal(err)
+	}
+}
