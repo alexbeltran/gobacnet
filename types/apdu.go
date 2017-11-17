@@ -117,6 +117,10 @@ type APDU struct {
 	WindowNumber              uint8
 	Service                   ServiceConfirmed
 	UnconfirmedService        ServiceUnconfirmed
+	Error                     struct {
+		Class uint32
+		Code  uint32
+	}
 
 	// This is the raw data passed based on the service
 	RawData []byte
