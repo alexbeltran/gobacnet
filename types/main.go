@@ -83,7 +83,7 @@ type Device struct {
 	Segmentation Enumerated
 	Vendor       uint32
 	Addr         Address
-	Objects      []Object
+	Objects      map[uint32]Object
 }
 
 type IAm struct {
