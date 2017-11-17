@@ -41,13 +41,14 @@ import (
 )
 
 func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
+	var out bactype.ReadMultipleProperty
 	id, err := c.tsm.GetFree()
 	if err != nil {
-		return bactype.ReadMultipleProperty{}, err
+		return out, err
 	}
 	udp, err := c.LocalUDPAddress()
 	if err != nil {
-		return bactype.ReadMultipleProperty{}, err
+		return out, err
 	}
 	src := bactype.UDPToAddress(udp)
 
@@ -63,13 +64,13 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 	})
 	enc.ReadMultipleProperty(uint8(id), rp)
 	if enc.Error() != nil {
-		return bactype.ReadMultipleProperty{}, err
+		return out, err
 	}
 
 	pack := enc.Bytes()
-	if dev.MaxApdu > uint32(len(pack)) {
+	if dev.MaxApdu < uint32(len(pack)) {
 		log.WithFields(log.Fields{"maxApdu": dev.MaxApdu, "apdu": len(pack)}).Debug("Package is too large")
-		return fmt.Errorf("Read multiple property is too large.")
+		return out, fmt.Errorf("Read multiple property is too large.")
 	}
 	// the value filled doesn't matter. it just needs to be non nil
 	err = fmt.Errorf("go")
@@ -84,19 +85,15 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 		if err != nil {
 			continue
 		}
-		var out bactype.ReadMultipleProperty
 		dec := encoding.NewDecoder(b)
 
 		var apdu bactype.APDU
 		dec.APDU(&apdu)
 		err = dec.ReadMultiplePropertyAck(&out)
 		if err != nil {
-			return bactype.ReadMultipleProperty{}, err
-		}
-		if err = dec.Error(); err != nil {
-			continue
+			return out, err
 		}
 		return out, err
 	}
-	return bactype.ReadMultipleProperty{}, err
+	return out, err
 }
