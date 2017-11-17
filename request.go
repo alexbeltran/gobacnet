@@ -49,7 +49,7 @@ func (c *Client) sendRequest() error {
 	return nil
 }
 
-func (c *Client) ReadProperty(dest *bactype.Address, rp bactype.ReadPropertyData) (bactype.ReadPropertyData, error) {
+func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) (bactype.ReadPropertyData, error) {
 	id, err := c.tsm.GetFree()
 	if err != nil {
 		return bactype.ReadPropertyData{}, err
@@ -63,7 +63,7 @@ func (c *Client) ReadProperty(dest *bactype.Address, rp bactype.ReadPropertyData
 	enc := encoding.NewEncoder()
 	enc.NPDU(bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
-		Destination:           dest,
+		Destination:           &dest.Addr,
 		Source:                &src,
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
@@ -80,7 +80,7 @@ func (c *Client) ReadProperty(dest *bactype.Address, rp bactype.ReadPropertyData
 	err = fmt.Errorf("go")
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
-		_, err = c.Send(*dest, enc.Bytes())
+		_, err = c.Send(dest.Addr, enc.Bytes())
 		if err != nil {
 			log.Print(err)
 			continue

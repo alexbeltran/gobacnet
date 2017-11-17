@@ -77,6 +77,15 @@ type Address struct {
 	Adr    []uint8
 }
 
+type Device struct {
+	ID           ObjectID
+	MaxApdu      uint32
+	Segmentation Enumerated
+	Vendor       uint32
+	Addr         Address
+	Objects      []Object
+}
+
 type IAm struct {
 	ID           ObjectID
 	MaxApdu      uint32

@@ -37,9 +37,10 @@ import (
 
 	"github.com/alexbeltran/gobacnet/encoding"
 	bactype "github.com/alexbeltran/gobacnet/types"
+	log "github.com/sirupsen/logrus"
 )
 
-func (c *Client) ReadMultiProperty(dest *bactype.Address, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
+func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
 	id, err := c.tsm.GetFree()
 	if err != nil {
 		return bactype.ReadMultipleProperty{}, err
@@ -53,7 +54,7 @@ func (c *Client) ReadMultiProperty(dest *bactype.Address, rp bactype.ReadMultipl
 	enc := encoding.NewEncoder()
 	enc.NPDU(bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
-		Destination:           dest,
+		Destination:           &dev.Addr,
 		Source:                &src,
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
@@ -65,11 +66,16 @@ func (c *Client) ReadMultiProperty(dest *bactype.Address, rp bactype.ReadMultipl
 		return bactype.ReadMultipleProperty{}, err
 	}
 
+	pack := enc.Bytes()
+	if dev.MaxApdu > uint32(len(pack)) {
+		log.WithFields(log.Fields{"maxApdu": dev.MaxApdu, "apdu": len(pack)}).Debug("Package is too large")
+		return fmt.Errorf("Read multiple property is too large.")
+	}
 	// the value filled doesn't matter. it just needs to be non nil
 	err = fmt.Errorf("go")
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
-		_, err = c.Send(*dest, enc.Bytes())
+		_, err = c.Send(dev.Addr, pack)
 		if err != nil {
 			continue
 		}

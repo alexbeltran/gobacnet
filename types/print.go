@@ -11,13 +11,13 @@ import (
 const defaultSpacing = 4
 
 const (
-	Device ObjectType = 8
-	File   ObjectType = 10
+	DeviceType ObjectType = 8
+	File       ObjectType = 10
 )
 
 var objTypeMap = map[ObjectType]string{
-	Device: "Device",
-	File:   "File",
+	DeviceType: "Device",
+	File:       "File",
 }
 
 func (t ObjectType) String() string {
