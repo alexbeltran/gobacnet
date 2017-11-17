@@ -47,7 +47,7 @@ func readMulti(cmd *cobra.Command, args []string) {
 	c, err := gobacnet.NewClient(viper.GetString("interface"), viper.GetInt("port"))
 
 	// We need the actual address of the device first.
-	resp, err := c.WhoIs(deviceID, deviceID)
+	resp, err := c.WhoIs(startRange, endRange)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,61 +56,69 @@ func readMulti(cmd *cobra.Command, args []string) {
 		log.Fatal("Device id was not found on the network.")
 	}
 
-	dest := &resp[0]
+	for _, d := range resp {
+		dest := &d
 
-	rp := types.ReadPropertyData{
-		Object: types.Object{
-			ID: types.ObjectID{
-				Type:     8,
-				Instance: uint32(deviceID),
-			},
-			Properties: []types.Property{
-				types.Property{
-					Type:       property.ObjectList,
-					ArrayIndex: 0xFFFFFFFF,
+		rp := types.ReadPropertyData{
+			Object: types.Object{
+				ID: types.ObjectID{
+					Type:     8,
+					Instance: uint32(deviceID),
+				},
+				Properties: []types.Property{
+					types.Property{
+						Type:       property.ObjectList,
+						ArrayIndex: gobacnet.ArrayAll,
+					},
 				},
 			},
-		},
-	}
+		}
 
-	out, err := c.ReadProperty(&dest.Addr, rp)
-	ids, ok := out.Object.Properties[0].Data.([]interface{})
-	if !ok {
-		fmt.Println("Unable to get object list")
-		return
-	}
-
-	rpm := types.ReadMultipleProperty{}
-	rpm.Objects = make([]types.Object, len(ids))
-	for i, raw_id := range ids {
-		id, ok := raw_id.(types.ObjectID)
-		if !ok {
-			log.Println("Unable to read object id %v", raw_id)
+		out, err := c.ReadProperty(&dest.Addr, rp)
+		if err != nil {
+			log.Fatal(err)
 			return
 		}
-		rpm.Objects[i].ID = id
-
-		rpm.Objects[i].Properties = []types.Property{
-			types.Property{
-				Type:       property.ObjectName,
-				ArrayIndex: 0xFFFFFFFF,
-			},
-			types.Property{
-				Type:       property.Description,
-				ArrayIndex: 0xFFFFFFFF,
-			},
+		ids, ok := out.Object.Properties[0].Data.([]interface{})
+		if !ok {
+			fmt.Println("Unable to get object list")
+			return
 		}
-	}
 
-	x, err := c.ReadMultiProperty(&dest.Addr, rpm)
-	if err != nil {
-		log.Fatal(err)
+		rpm := types.ReadMultipleProperty{}
+		rpm.Objects = make([]types.Object, len(ids))
+		for i, raw_id := range ids {
+			id, ok := raw_id.(types.ObjectID)
+			if !ok {
+				log.Println("Unable to read object id %v", raw_id)
+				return
+			}
+			rpm.Objects[i].ID = id
+
+			rpm.Objects[i].Properties = []types.Property{
+				types.Property{
+					Type:       property.ObjectName,
+					ArrayIndex: gobacnet.ArrayAll,
+				},
+				types.Property{
+					Type:       property.Description,
+					ArrayIndex: gobacnet.ArrayAll,
+				},
+			}
+		}
+
+		x, err := c.ReadMultiProperty(&dest.Addr, rpm)
+		if err != nil {
+			log.Println(err)
+		}
+		fmt.Println(x)
 	}
-	fmt.Println(x)
 }
 
 func init() {
 	readpropCmd.AddCommand(readmultipropCmd)
+	readmultipropCmd.Flags().IntVarP(&startRange, "start", "s", -1, "Start range of discovery")
+	readmultipropCmd.Flags().IntVarP(&endRange, "end", "e", int(0xBAC0), "End range of discovery")
 
 	// Here you will define your flags and configuration settings.
 
