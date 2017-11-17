@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/spf13/viper"
@@ -25,6 +24,8 @@ import (
 	"github.com/alexbeltran/gobacnet/property"
 	"github.com/alexbeltran/gobacnet/types"
 	"github.com/spf13/cobra"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Flags
@@ -107,7 +108,7 @@ func readProp(cmd *cobra.Command, args []string) {
 	out, err := c.ReadProperty(dest, rp)
 	if err != nil {
 		if rp.Object.Properties[0].Type == property.ObjectList {
-			log.Errorf("Note: ObjectList reads may need to be broken up into multiple reads due to length. Read index 0 for array length")
+			log.Error("Note: ObjectList reads may need to be broken up into multiple reads due to length. Read index 0 for array length")
 		}
 		log.Fatal(err)
 	}
