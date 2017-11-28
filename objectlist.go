@@ -68,15 +68,18 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 	return objs, nil
 }
 
-func (c *Client) Objects(dev bactype.Device) error {
+const readPropRequestSize = 16
+
+func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
 	dev.Objects = make(map[uint32]bactype.Object)
 
 	l, err := c.objectListLen(dev)
 	if err != nil {
-		return err
+		return dev, err
 	}
 
-	const scanSize = 2
+	// Scan size is broken
+	scanSize := int(dev.MaxApdu) / readPropRequestSize
 	i := 0
 	for i = 0; i < l/scanSize; i++ {
 		start := i*scanSize + 1
@@ -85,7 +88,7 @@ func (c *Client) Objects(dev bactype.Device) error {
 
 		objs, err := c.objectsRange(dev, start, end)
 		if err != nil {
-			return err
+			return dev, err
 		}
 
 		for _, o := range objs {
@@ -98,14 +101,11 @@ func (c *Client) Objects(dev bactype.Device) error {
 		log.Printf("%d -> %d", start, end)
 		objs, err := c.objectsRange(dev, start, end)
 		if err != nil {
-			return err
+			return dev, err
 		}
 		for _, o := range objs {
 			dev.Objects[o.ID.Instance] = o
 		}
 	}
-
-	log.Println(dev.Objects)
-	log.Printf("List length, %d", l)
-	return nil
+	return dev, nil
 }
