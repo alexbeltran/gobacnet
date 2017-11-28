@@ -11,13 +11,31 @@ import (
 const defaultSpacing = 4
 
 const (
-	DeviceType ObjectType = 8
-	File       ObjectType = 10
+	AnalogInput       ObjectType = 0
+	AnalogOutput      ObjectType = 1
+	AnalogValue       ObjectType = 2
+	BinaryInput       ObjectType = 3
+	BinaryOutput      ObjectType = 4
+	BinaryValue       ObjectType = 5
+	DeviceType        ObjectType = 8
+	File              ObjectType = 10
+	NotificationClass ObjectType = 15
+	MultiStateValue   ObjectType = 19
+	TrendLog          ObjectType = 20
 )
 
 var objTypeMap = map[ObjectType]string{
-	DeviceType: "Device",
-	File:       "File",
+	AnalogInput:       "Analog Input",
+	AnalogOutput:      "Analog Output",
+	AnalogValue:       "Analog Value",
+	BinaryInput:       "Binary Input",
+	BinaryOutput:      "Binary Output",
+	BinaryValue:       "Binary Value",
+	DeviceType:        "Device",
+	File:              "File",
+	NotificationClass: "Notification Class",
+	MultiStateValue:   "Multi-State Value",
+	TrendLog:          "Trend Log",
 }
 
 func (t ObjectType) String() string {
