@@ -45,8 +45,10 @@ type ObjectID struct {
 }
 
 type Object struct {
-	ID         ObjectID
-	Properties []Property
+	Name        string
+	Description string
+	ID          ObjectID
+	Properties  []Property `json:",omitempty"`
 }
 
 type Property struct {
