@@ -70,12 +70,12 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 
 const readPropRequestSize = 16
 
-func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
+func (c *Client) ObjectList(dev *bactype.Device) error {
 	dev.Objects = make(map[uint32]bactype.Object)
 
-	l, err := c.objectListLen(dev)
+	l, err := c.objectListLen(*dev)
 	if err != nil {
-		return dev, err
+		return err
 	}
 
 	// Scan size is broken
@@ -86,9 +86,9 @@ func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
 		end := (i + 1) * scanSize
 		log.Printf("%d -> %d", start, end)
 
-		objs, err := c.objectsRange(dev, start, end)
+		objs, err := c.objectsRange(*dev, start, end)
 		if err != nil {
-			return dev, err
+			return err
 		}
 
 		for _, o := range objs {
@@ -99,13 +99,74 @@ func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
 	end := l
 	if start <= end {
 		log.Printf("%d -> %d", start, end)
-		objs, err := c.objectsRange(dev, start, end)
+		objs, err := c.objectsRange(*dev, start, end)
 		if err != nil {
-			return dev, err
+			return err
 		}
 		for _, o := range objs {
 			dev.Objects[o.ID.Instance] = o
 		}
 	}
-	return dev, nil
+	return nil
+}
+
+func (c *Client) objectInformation(dev *bactype.Device) error {
+	rpm := bactype.ReadMultipleProperty{
+		Objects: []bactype.Object{},
+	}
+
+	// Often times the map will re arrange the order it spits out
+	// so we need to keep track since the response will be in the
+	// same order we issue the commands.
+	keys := make([]uint32, len(dev.Objects))
+	counter := 0
+	for i, o := range dev.Objects {
+		keys[counter] = i
+		counter++
+		rpm.Objects = append(rpm.Objects, bactype.Object{
+			ID: o.ID,
+			Properties: []bactype.Property{
+				bactype.Property{
+					Type:       property.ObjectName,
+					ArrayIndex: bactype.ArrayAll,
+				},
+				bactype.Property{
+					Type:       property.Description,
+					ArrayIndex: bactype.ArrayAll,
+				},
+			},
+		})
+
+	}
+	resp, err := c.ReadMultiProperty(*dev, rpm)
+	if err != nil {
+		return err
+	}
+	var name, description string
+	var ok bool
+	for i, r := range resp.Objects {
+		name, ok = r.Properties[0].Data.(string)
+		if !ok {
+			return fmt.Errorf("Incorrect data returned")
+		}
+		description, ok = r.Properties[1].Data.(string)
+		if !ok {
+			return fmt.Errorf("Incorrect data returned")
+		}
+		obj := dev.Objects[keys[i]]
+		obj.Name = name
+		obj.Description = description
+		dev.Objects[keys[i]] = obj
+	}
+
+	return nil
+}
+
+func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
+	err := c.ObjectList(&dev)
+	if err != nil {
+		return dev, nil
+	}
+	err = c.objectInformation(&dev)
+	return dev, err
 }
