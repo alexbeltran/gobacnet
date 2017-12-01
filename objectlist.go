@@ -70,7 +70,7 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 
 const readPropRequestSize = 16
 
-func (c *Client) ObjectList(dev *bactype.Device) error {
+func (c *Client) objectList(dev *bactype.Device) error {
 	dev.Objects = make(map[uint32]bactype.Object)
 
 	l, err := c.objectListLen(*dev)
@@ -162,11 +162,16 @@ func (c *Client) objectInformation(dev *bactype.Device) error {
 	return nil
 }
 
+// Objects scans for all objects within the device. It will also gather
+// additional information from the object such as the name and description of
+// the objects.
 func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
-	err := c.ObjectList(&dev)
+	err := c.objectList(&dev)
 	if err != nil {
 		return dev, nil
 	}
+	log.Println(dev)
 	err = c.objectInformation(&dev)
+	log.Println(dev)
 	return dev, err
 }
