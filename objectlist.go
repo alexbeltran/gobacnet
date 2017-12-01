@@ -69,6 +69,16 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 
 const readPropRequestSize = 16
 
+func objectCopy(dest bactype.ObjectMap, src []bactype.Object) {
+	for _, o := range src {
+		if dest[o.ID.Type] == nil {
+			dest[o.ID.Type] = make(map[bactype.ObjectInstance]bactype.Object)
+		}
+		dest[o.ID.Type][o.ID.Instance] = o
+	}
+
+}
+
 func (c *Client) objectList(dev *bactype.Device) error {
 	dev.Objects = make(bactype.ObjectMap)
 
@@ -88,13 +98,7 @@ func (c *Client) objectList(dev *bactype.Device) error {
 		if err != nil {
 			return err
 		}
-
-		for _, o := range objs {
-			if dev.Objects[o.ID.Type] == nil {
-				dev.Objects[o.ID.Type] = make(map[bactype.ObjectInstance]bactype.Object)
-			}
-			dev.Objects[o.ID.Type][o.ID.Instance] = o
-		}
+		objectCopy(dev.Objects, objs)
 	}
 	start := i*scanSize + 1
 	end := l
@@ -103,13 +107,7 @@ func (c *Client) objectList(dev *bactype.Device) error {
 		if err != nil {
 			return err
 		}
-		for _, o := range objs {
-			if dev.Objects[o.ID.Type] == nil {
-				dev.Objects[o.ID.Type] = make(map[bactype.ObjectInstance]bactype.Object)
-			}
-
-			dev.Objects[o.ID.Type][o.ID.Instance] = o
-		}
+		objectCopy(dev.Objects, objs)
 	}
 	return nil
 }
