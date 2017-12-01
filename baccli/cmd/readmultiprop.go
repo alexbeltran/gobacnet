@@ -63,7 +63,7 @@ func readMulti(cmd *cobra.Command, args []string) {
 			Object: types.Object{
 				ID: types.ObjectID{
 					Type:     8,
-					Instance: uint32(deviceID),
+					Instance: types.ObjectInstance(deviceID),
 				},
 				Properties: []types.Property{
 					types.Property{

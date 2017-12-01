@@ -2,7 +2,6 @@ package gobacnet
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/alexbeltran/gobacnet/property"
 	bactype "github.com/alexbeltran/gobacnet/types"
@@ -71,10 +70,9 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 const readPropRequestSize = 16
 
 func (c *Client) objectList(dev *bactype.Device) error {
-	dev.Objects = make(map[bactype.ObjectID]bactype.Object)
+	dev.Objects = make(bactype.ObjectMap)
 
 	l, err := c.objectListLen(*dev)
-	log.Printf("List lenght:%d", l)
 	if err != nil {
 		return err
 	}
@@ -85,7 +83,6 @@ func (c *Client) objectList(dev *bactype.Device) error {
 	for i = 0; i < l/scanSize; i++ {
 		start := i*scanSize + 1
 		end := (i + 1) * scanSize
-		log.Printf("%d -> %d", start, end)
 
 		objs, err := c.objectsRange(*dev, start, end)
 		if err != nil {
@@ -93,19 +90,25 @@ func (c *Client) objectList(dev *bactype.Device) error {
 		}
 
 		for _, o := range objs {
-			dev.Objects[o.ID] = o
+			if dev.Objects[o.ID.Type] == nil {
+				dev.Objects[o.ID.Type] = make(map[bactype.ObjectInstance]bactype.Object)
+			}
+			dev.Objects[o.ID.Type][o.ID.Instance] = o
 		}
 	}
 	start := i*scanSize + 1
 	end := l
 	if start <= end {
-		log.Printf("%d -> %d", start, end)
 		objs, err := c.objectsRange(*dev, start, end)
 		if err != nil {
 			return err
 		}
 		for _, o := range objs {
-			dev.Objects[o.ID] = o
+			if dev.Objects[o.ID.Type] == nil {
+				dev.Objects[o.ID.Type] = make(map[bactype.ObjectInstance]bactype.Object)
+			}
+
+			dev.Objects[o.ID.Type][o.ID.Instance] = o
 		}
 	}
 	return nil
@@ -113,31 +116,36 @@ func (c *Client) objectList(dev *bactype.Device) error {
 
 func (c *Client) objectInformation(dev *bactype.Device) error {
 	rpm := bactype.ReadMultipleProperty{
-		Objects: []bactype.Object{},
-	}
+		Objects: []bactype.Object{}}
 
 	// Often times the map will re arrange the order it spits out
 	// so we need to keep track since the response will be in the
 	// same order we issue the commands.
-	keys := make([]bactype.ObjectID, len(dev.Objects))
+	keys := make([]bactype.ObjectID, dev.Objects.Len())
 	counter := 0
-	for i, o := range dev.Objects {
-		keys[counter] = i
-		counter++
-		rpm.Objects = append(rpm.Objects, bactype.Object{
-			ID: o.ID,
-			Properties: []bactype.Property{
-				bactype.Property{
-					Type:       property.ObjectName,
-					ArrayIndex: bactype.ArrayAll,
-				},
-				bactype.Property{
-					Type:       property.Description,
-					ArrayIndex: bactype.ArrayAll,
-				},
-			},
-		})
+	for t, m := range dev.Objects {
+		for i, o := range m {
+			keys[counter] = bactype.ObjectID{
+				Instance: i,
+				Type:     t,
+			}
 
+			counter++
+			rpm.Objects = append(rpm.Objects, bactype.Object{
+				ID: o.ID,
+				Properties: []bactype.Property{
+					bactype.Property{
+						Type:       property.ObjectName,
+						ArrayIndex: bactype.ArrayAll,
+					},
+					bactype.Property{
+						Type:       property.Description,
+						ArrayIndex: bactype.ArrayAll,
+					},
+				},
+			})
+
+		}
 	}
 	resp, err := c.ReadMultiProperty(*dev, rpm)
 	if err != nil {
@@ -154,10 +162,10 @@ func (c *Client) objectInformation(dev *bactype.Device) error {
 		if !ok {
 			return fmt.Errorf("Incorrect data returned")
 		}
-		obj := dev.Objects[keys[i]]
+		obj := dev.Objects[keys[i].Type][keys[i].Instance]
 		obj.Name = name
 		obj.Description = description
-		dev.Objects[keys[i]] = obj
+		dev.Objects[keys[i].Type][keys[i].Instance] = obj
 	}
 
 	return nil
@@ -171,8 +179,6 @@ func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
 	if err != nil {
 		return dev, nil
 	}
-	log.Println(dev.Objects)
 	err = c.objectInformation(&dev)
-	log.Println(dev.Objects)
 	return dev, err
 }

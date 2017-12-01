@@ -124,7 +124,7 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 	expectedTag++
 
 	var objectType bactype.ObjectType
-	var instance uint32
+	var instance bactype.ObjectInstance
 	if !meta.isContextSpecific() {
 		return fmt.Errorf("Tag %d should be context specific. %x", tag, meta)
 	}

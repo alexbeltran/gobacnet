@@ -38,10 +38,11 @@ import (
 
 type Enumerated uint32
 type ObjectType uint16
+type ObjectInstance uint32
 
 type ObjectID struct {
 	Type     ObjectType
-	Instance uint32
+	Instance ObjectInstance
 }
 
 type Object struct {
@@ -79,13 +80,15 @@ type Address struct {
 	Adr    []uint8
 }
 
+type ObjectMap map[ObjectType]map[ObjectInstance]Object
+
 type Device struct {
 	ID           ObjectID
 	MaxApdu      uint32
 	Segmentation Enumerated
 	Vendor       uint32
 	Addr         Address
-	Objects      map[ObjectID]Object
+	Objects      ObjectMap
 }
 
 type IAm struct {
@@ -163,4 +166,16 @@ func UDPToAddress(n *net.UDPAddr) Address {
 
 	a.MacLen = uint8(length)
 	return a
+}
+
+// Len returns the total number of entries within the object map.
+func (o ObjectMap) Len() int {
+	counter := 0
+	for _, t := range o {
+		for _ = range t {
+			counter++
+		}
+
+	}
+	return counter
 }

@@ -84,7 +84,7 @@ func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 
 	// Weed out values that are not important such as non object type
 	// and that are not
-	uniqueMap := make(map[uint32]types.Device)
+	uniqueMap := make(map[types.ObjectInstance]types.Device)
 	uniqueList := make([]types.Device, len(uniqueMap))
 	for _, v := range values {
 		r, ok := v.(types.IAm)

@@ -95,7 +95,7 @@ func readProp(cmd *cobra.Command, args []string) {
 		Object: types.Object{
 			ID: types.ObjectID{
 				Type:     types.ObjectType(objectType),
-				Instance: uint32(objectID),
+				Instance: types.ObjectInstance(objectID),
 			},
 			Properties: []types.Property{
 				types.Property{

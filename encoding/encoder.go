@@ -68,7 +68,7 @@ func (e *Encoder) write(p interface{}) {
 	e.err = binary.Write(e.buff, EncodingEndian, p)
 }
 
-func (e *Encoder) contextObjectID(tagNum uint8, objectType bactype.ObjectType, instance uint32) {
+func (e *Encoder) contextObjectID(tagNum uint8, objectType bactype.ObjectType, instance bactype.ObjectInstance) {
 	/* length of object id is 4 octets, as per 20.2.14 */
 	e.tag(tagInfo{ID: tagNum, Context: true, Value: 4})
 	e.objectId(objectType, instance)
@@ -149,9 +149,9 @@ func (e *Encoder) tag(tg tagInfo) {
 
 /* from clause 20.2.14 Encoding of an Object Identifier Value
 returns the number of apdu bytes consumed */
-func (e *Encoder) objectId(objectType bactype.ObjectType, instance uint32) {
+func (e *Encoder) objectId(objectType bactype.ObjectType, instance bactype.ObjectInstance) {
 	var value uint32
-	value = ((uint32(objectType) & MaxObject) << InstanceBits) | (instance & MaxInstance)
+	value = ((uint32(objectType) & MaxObject) << InstanceBits) | (uint32(instance) & MaxInstance)
 	e.write(value)
 }
 
