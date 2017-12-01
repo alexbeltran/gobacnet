@@ -71,9 +71,10 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 const readPropRequestSize = 16
 
 func (c *Client) objectList(dev *bactype.Device) error {
-	dev.Objects = make(map[uint32]bactype.Object)
+	dev.Objects = make(map[bactype.ObjectID]bactype.Object)
 
 	l, err := c.objectListLen(*dev)
+	log.Printf("List lenght:%d", l)
 	if err != nil {
 		return err
 	}
@@ -92,7 +93,7 @@ func (c *Client) objectList(dev *bactype.Device) error {
 		}
 
 		for _, o := range objs {
-			dev.Objects[o.ID.Instance] = o
+			dev.Objects[o.ID] = o
 		}
 	}
 	start := i*scanSize + 1
@@ -104,7 +105,7 @@ func (c *Client) objectList(dev *bactype.Device) error {
 			return err
 		}
 		for _, o := range objs {
-			dev.Objects[o.ID.Instance] = o
+			dev.Objects[o.ID] = o
 		}
 	}
 	return nil
@@ -118,7 +119,7 @@ func (c *Client) objectInformation(dev *bactype.Device) error {
 	// Often times the map will re arrange the order it spits out
 	// so we need to keep track since the response will be in the
 	// same order we issue the commands.
-	keys := make([]uint32, len(dev.Objects))
+	keys := make([]bactype.ObjectID, len(dev.Objects))
 	counter := 0
 	for i, o := range dev.Objects {
 		keys[counter] = i
@@ -170,8 +171,8 @@ func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
 	if err != nil {
 		return dev, nil
 	}
-	log.Println(dev)
+	log.Println(dev.Objects)
 	err = c.objectInformation(&dev)
-	log.Println(dev)
+	log.Println(dev.Objects)
 	return dev, err
 }
