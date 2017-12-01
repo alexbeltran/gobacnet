@@ -25,6 +25,7 @@ import (
 )
 
 var scanSize uint32
+var printStdout bool
 
 // discoverCmd represents the discover command
 var discoverCmd = &cobra.Command{
@@ -108,9 +109,15 @@ func discover(cmd *cobra.Command, args []string) {
 
 	close(devChan)
 	out := <-finish
-	file, err := os.Create("test.json")
-	if err != nil {
-		log.Println(err)
+	var file *os.File
+	if printStdout {
+		file = os.Stdout
+	} else {
+		file, err = os.Create("test.json")
+
+		if err != nil {
+			log.Println(err)
+		}
 	}
 	defer file.Close()
 
@@ -125,4 +132,5 @@ func init() {
 
 	RootCmd.AddCommand(discoverCmd)
 	discoverCmd.Flags().Uint32VarP(&scanSize, "size", "s", 10000, scanSizeDescription)
+	discoverCmd.Flags().BoolVar(&printStdout, "stdout", false, "Print to stdout")
 }
