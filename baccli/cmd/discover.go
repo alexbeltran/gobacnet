@@ -48,6 +48,7 @@ func gather(client *gobacnet.Client, devChan chan []types.Device, complete chan 
 		// Query all of the devices
 		for i, d := range devs {
 			go func(i int, d types.Device) {
+				log.Printf("Discover Device: %d", d.ID.Instance)
 				devs[i], err = client.Objects(d)
 				results <- err
 			}(i, d)
