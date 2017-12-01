@@ -32,6 +32,7 @@ License.
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 )
@@ -178,4 +179,39 @@ func (o ObjectMap) Len() int {
 
 	}
 	return counter
+}
+
+func (om *ObjectMap) MarshalJSON() ([]byte, error) {
+	m := make(map[string]map[ObjectInstance]Object)
+	for typ, sub := range *om {
+		key := typ.String()
+		if m[key] == nil {
+			m[key] = make(map[ObjectInstance]Object)
+		}
+		for inst, obj := range sub {
+			m[key][inst] = obj
+		}
+	}
+	return json.Marshal(m)
+}
+
+func (om *ObjectMap) UnmarshalJSON(data []byte) error {
+	m := make(map[string]map[ObjectInstance]Object)
+	err := json.Unmarshal(data, m)
+	if err != nil {
+		return err
+	}
+
+	objMap := ObjectMap{}
+	for t, sub := range m {
+		key := GetType(t)
+		if objMap[key] == nil {
+			objMap[key] = make(map[ObjectInstance]Object)
+		}
+		for inst, obj := range sub {
+			objMap[key][inst] = obj
+		}
+	}
+	om = &objMap
+	return nil
 }
