@@ -37,7 +37,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alexbeltran/gobacnet/encoding"
 	"github.com/alexbeltran/gobacnet/types"
 )
 
@@ -114,33 +113,11 @@ func TestReadPropertyService(t *testing.T) {
 			},
 		},
 	}
-	resp, err := c.ReadProperty(&dest, read)
+	resp, err := c.ReadProperty(types.Device{Addr: dest}, read)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dec := encoding.NewDecoder(resp.Object.Properties[0].Data)
-	out, err := dec.AppData()
-	log.Printf("Out Value 1: %v", out)
-	log.Printf("%v", read.Object.Properties[0].Data)
-
-	/*
-		read.ObjectProperty = 76
-		read.ObjectInstance = 242829
-		read.ObjectType = 8
-		//	read.ArrayIndex = 0
-		resp, err = c.ReadProperty(&dest, read)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		dec = encoding.NewDecoder(resp.ApplicationData)
-		out, err = dec.AppData()
-		if err != nil {
-			t.Fatal(err)
-		}
-		log.Printf("Out Value 2: %v", out)
-		log.Printf("Raw: %v", resp.ApplicationData)
-	*/
+	t.Logf("%v", resp.Object.Properties[0].Data)
 }
 func TestMac(t *testing.T) {
 	var mac []byte
@@ -156,7 +133,7 @@ func TestWhoIs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = c.WhoIs(242800, 242900)
+	_, err = c.WhoIs(242800, 242900)
 	if err != nil {
 		t.Fatal(err)
 	}
