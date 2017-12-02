@@ -1,5 +1,6 @@
-# GoBACnet 
+# goBACnet 
 [![Build Status](https://travis-ci.com/alexbeltran/gobacnet.svg?token=pGXqDCNsbwsP7nyfos9q&branch=master)](https://travis-ci.com/alexbeltran/gobacnet)
+
 gobacnet is a client for bacnet written exclusively with go. The goal is to
 only offer a client and a test server application.
 
