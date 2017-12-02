@@ -36,6 +36,8 @@ import (
 	"log"
 	"testing"
 
+	"github.com/alexbeltran/gobacnet/property"
+
 	"github.com/alexbeltran/gobacnet/types"
 )
 
@@ -94,7 +96,7 @@ func TestReadPropertyService(t *testing.T) {
 			},
 			Properties: []types.Property{
 				types.Property{
-					Type:       85, // Present value
+					Type:       property.ObjectName, // Present value
 					ArrayIndex: ArrayAll,
 				},
 			},
@@ -104,8 +106,8 @@ func TestReadPropertyService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("%v", resp.Object.Properties[0].Data)
 }
+
 func TestMac(t *testing.T) {
 	var mac []byte
 	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
