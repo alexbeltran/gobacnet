@@ -122,6 +122,10 @@ func testReadPropertyService(c *Client, t *testing.T) {
 			},
 		},
 	}
+	if len(dev) == 0 {
+		t.Fatalf("Unable to find device id %d", testServer)
+	}
+
 	resp, err := c.ReadProperty(dev[0], read)
 	if err != nil {
 		t.Fatal(err)
