@@ -1,0 +1,11 @@
+sudo: required
+
+language: go
+
+services:
+  - docker
+
+script:
+  - docker pull ucmercedandeslab/bacnet-server
+  - docker run -it --rm -d ucmercedandeslab/bacnet-server
+  - go test -t ./...
