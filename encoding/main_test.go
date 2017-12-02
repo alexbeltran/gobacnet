@@ -178,7 +178,7 @@ func TestSegsApduEncode(t *testing.T) {
 func TestObject(t *testing.T) {
 	e := NewEncoder()
 	var inObjectType bactype.ObjectType = 17
-	var inInstance uint32 = 23
+	var inInstance bactype.ObjectInstance = 23
 	e.objectId(inObjectType, inInstance)
 	b := e.Bytes()
 	t.Log(b)
