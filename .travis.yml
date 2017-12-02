@@ -15,4 +15,4 @@ script:
   - docker pull ucmercedandeslab/bacnet-server
   - docker run -it --rm -d ucmercedandeslab/bacnet-server
   - go test -c 
-  - docker run -it --rm -v $(pwd):/opt/ debian /opt/gobacnet.test
+  - docker run -it --rm -v $(pwd):/opt/ debian /opt/gobacnet.test -test.v
