@@ -76,11 +76,20 @@ func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 		end = high
 	}
 
-	_, err = c.Send(dest, enc.Bytes())
+	// Run in parallel
+	errChan := make(chan error)
+	go func() {
+		_, err = c.Send(dest, enc.Bytes())
+		errChan <- err
+	}()
+	values, err := c.utsm.Subscribe(start, end)
 	if err != nil {
 		return nil, err
 	}
-	values, err := c.utsm.Subscribe(start, end)
+	err = <-errChan
+	if err != nil {
+		return nil, err
+	}
 
 	// Weed out values that are not important such as non object type
 	// and that are not
