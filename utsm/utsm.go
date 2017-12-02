@@ -41,7 +41,7 @@ const (
 
 	// defaultSubTimeout is how long in between publish packages to a subscriber
 	// before we timeout waiting for additional data.
-	defaultSubTimeout = time.Duration(3) * time.Second
+	defaultSubTimeout = time.Duration(1) * time.Second
 )
 
 // Manager handles subscriptions and publications. Each manager is thread-safe
