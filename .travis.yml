@@ -6,6 +6,13 @@ services:
   - docker
 
 script:
+# Run unit tests
+  - go test ./encoding
+  - go test ./tsm
+  - go test ./types
+  - go test ./utsm
+# Run Test that require a test server
   - docker pull ucmercedandeslab/bacnet-server
   - docker run -it --rm -d ucmercedandeslab/bacnet-server
-  - go test ./...
+  - go test -c 
+  - docker run -it --rm -v $(pwd):/opt/ debian /opt/gobacnet.test
