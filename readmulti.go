@@ -37,23 +37,25 @@ import (
 
 	"github.com/alexbeltran/gobacnet/encoding"
 	bactype "github.com/alexbeltran/gobacnet/types"
+	log "github.com/sirupsen/logrus"
 )
 
-func (c *Client) ReadMultiProperty(dest *bactype.Address, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
+func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
+	var out bactype.ReadMultipleProperty
 	id, err := c.tsm.GetFree()
 	if err != nil {
-		return bactype.ReadMultipleProperty{}, err
+		return out, err
 	}
 	udp, err := c.LocalUDPAddress()
 	if err != nil {
-		return bactype.ReadMultipleProperty{}, err
+		return out, err
 	}
 	src := bactype.UDPToAddress(udp)
 
 	enc := encoding.NewEncoder()
 	enc.NPDU(bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
-		Destination:           dest,
+		Destination:           &dev.Addr,
 		Source:                &src,
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
@@ -62,14 +64,19 @@ func (c *Client) ReadMultiProperty(dest *bactype.Address, rp bactype.ReadMultipl
 	})
 	enc.ReadMultipleProperty(uint8(id), rp)
 	if enc.Error() != nil {
-		return bactype.ReadMultipleProperty{}, err
+		return out, err
 	}
 
+	pack := enc.Bytes()
+	if dev.MaxApdu < uint32(len(pack)) {
+		log.WithFields(log.Fields{"maxApdu": dev.MaxApdu, "apdu": len(pack)}).Debug("Package is too large")
+		return out, fmt.Errorf("Read multiple property is too large.")
+	}
 	// the value filled doesn't matter. it just needs to be non nil
 	err = fmt.Errorf("go")
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
-		_, err = c.Send(*dest, enc.Bytes())
+		_, err = c.Send(dev.Addr, pack)
 		if err != nil {
 			continue
 		}
@@ -78,19 +85,15 @@ func (c *Client) ReadMultiProperty(dest *bactype.Address, rp bactype.ReadMultipl
 		if err != nil {
 			continue
 		}
-		var out bactype.ReadMultipleProperty
 		dec := encoding.NewDecoder(b)
 
 		var apdu bactype.APDU
 		dec.APDU(&apdu)
 		err = dec.ReadMultiplePropertyAck(&out)
 		if err != nil {
-			return bactype.ReadMultipleProperty{}, err
-		}
-		if err = dec.Error(); err != nil {
-			continue
+			return out, err
 		}
 		return out, err
 	}
-	return bactype.ReadMultipleProperty{}, err
+	return out, err
 }

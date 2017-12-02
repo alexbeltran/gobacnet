@@ -35,13 +35,11 @@ import (
 	"encoding/json"
 	"log"
 	"testing"
-	"time"
 
-	"github.com/alexbeltran/gobacnet/encoding"
 	"github.com/alexbeltran/gobacnet/types"
 )
 
-const interfaceName = "eth1"
+const interfaceName = "eth0"
 
 // TestMain are general test
 func TestMain(t *testing.T) {
@@ -81,29 +79,17 @@ func TestGetBroadcast(t *testing.T) {
 }
 
 func TestReadPropertyService(t *testing.T) {
-	c, err := NewClient(interfaceName, DefaultPort+1)
+	c, err := NewClient(interfaceName, DefaultPort)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer c.Close()
-	time.Sleep(time.Duration(1) * time.Second)
 
-	var mac []byte
-	var adr []byte
-	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
-	json.Unmarshal([]byte("\"HQ==\""), &adr)
-	log.Println(mac)
-	dest := types.Address{
-		Net:    2428,
-		Len:    1,
-		MacLen: 6,
-		Mac:    mac,
-		Adr:    adr,
-	}
+	dev, err := c.WhoIs(1234, 1234)
 	read := types.ReadPropertyData{
 		Object: types.Object{
 			ID: types.ObjectID{
-				Type:     0,
+				Type:     types.AnalogValue,
 				Instance: 1,
 			},
 			Properties: []types.Property{
@@ -114,33 +100,11 @@ func TestReadPropertyService(t *testing.T) {
 			},
 		},
 	}
-	resp, err := c.ReadProperty(&dest, read)
+	resp, err := c.ReadProperty(dev[0], read)
 	if err != nil {
 		t.Fatal(err)
 	}
-	dec := encoding.NewDecoder(resp.Object.Properties[0].Data)
-	out, err := dec.AppData()
-	log.Printf("Out Value 1: %v", out)
-	log.Printf("%v", read.Object.Properties[0].Data)
-
-	/*
-		read.ObjectProperty = 76
-		read.ObjectInstance = 242829
-		read.ObjectType = 8
-		//	read.ArrayIndex = 0
-		resp, err = c.ReadProperty(&dest, read)
-		if err != nil {
-			t.Fatal(err)
-		}
-
-		dec = encoding.NewDecoder(resp.ApplicationData)
-		out, err = dec.AppData()
-		if err != nil {
-			t.Fatal(err)
-		}
-		log.Printf("Out Value 2: %v", out)
-		log.Printf("Raw: %v", resp.ApplicationData)
-	*/
+	t.Logf("%v", resp.Object.Properties[0].Data)
 }
 func TestMac(t *testing.T) {
 	var mac []byte
@@ -151,15 +115,13 @@ func TestMac(t *testing.T) {
 }
 
 func TestWhoIs(t *testing.T) {
-	time.Sleep(time.Duration(1) * time.Second)
 	c, err := NewClient(interfaceName, DefaultPort)
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = c.WhoIs(242800, 242900)
+	_, err = c.WhoIs(1230, 1235)
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(time.Duration(30) * time.Second)
 	c.Close()
 }

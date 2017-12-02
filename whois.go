@@ -38,7 +38,7 @@ import (
 	"github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) WhoIs(low, high int) ([]types.IAm, error) {
+func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 	dest := types.UDPToAddress(&net.UDPAddr{
 		IP:   c.BroadcastAddress,
 		Port: DefaultPort,
@@ -84,8 +84,8 @@ func (c *Client) WhoIs(low, high int) ([]types.IAm, error) {
 
 	// Weed out values that are not important such as non object type
 	// and that are not
-	uniqueMap := make(map[uint32]types.IAm)
-	uniqueList := make([]types.IAm, len(uniqueMap))
+	uniqueMap := make(map[types.ObjectInstance]types.Device)
+	uniqueList := make([]types.Device, len(uniqueMap))
 	for _, v := range values {
 		r, ok := v.(types.IAm)
 
@@ -96,8 +96,15 @@ func (c *Client) WhoIs(low, high int) ([]types.IAm, error) {
 
 		// Check to see if we are in the map before inserting
 		if _, ok := uniqueMap[r.ID.Instance]; !ok {
-			uniqueMap[r.ID.Instance] = r
-			uniqueList = append(uniqueList, r)
+			dev := types.Device{
+				Addr:         r.Addr,
+				ID:           r.ID,
+				MaxApdu:      r.MaxApdu,
+				Segmentation: r.Segmentation,
+				Vendor:       r.Vendor,
+			}
+			uniqueMap[r.ID.Instance] = types.Device(dev)
+			uniqueList = append(uniqueList, dev)
 		}
 	}
 	return uniqueList, err

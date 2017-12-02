@@ -32,21 +32,25 @@ License.
 package types
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 )
 
 type Enumerated uint32
 type ObjectType uint16
+type ObjectInstance uint32
 
 type ObjectID struct {
 	Type     ObjectType
-	Instance uint32
+	Instance ObjectInstance
 }
 
 type Object struct {
-	ID         ObjectID
-	Properties []Property
+	Name        string
+	Description string
+	ID          ObjectID
+	Properties  []Property `json:",omitempty"`
 }
 
 type Property struct {
@@ -75,6 +79,17 @@ type Address struct {
 	MacLen uint8
 	Mac    []uint8
 	Adr    []uint8
+}
+
+type ObjectMap map[ObjectType]map[ObjectInstance]Object
+
+type Device struct {
+	ID           ObjectID
+	MaxApdu      uint32
+	Segmentation Enumerated
+	Vendor       uint32
+	Addr         Address
+	Objects      ObjectMap
 }
 
 type IAm struct {
@@ -152,4 +167,49 @@ func UDPToAddress(n *net.UDPAddr) Address {
 
 	a.MacLen = uint8(length)
 	return a
+}
+
+// Len returns the total number of entries within the object map.
+func (o ObjectMap) Len() int {
+	counter := 0
+	for _, t := range o {
+		for _ = range t {
+			counter++
+		}
+
+	}
+	return counter
+}
+
+func (om ObjectMap) MarshalJSON() ([]byte, error) {
+	m := make(map[string]map[ObjectInstance]Object)
+	for typ, sub := range om {
+		key := typ.String()
+		if m[key] == nil {
+			m[key] = make(map[ObjectInstance]Object)
+		}
+		for inst, obj := range sub {
+			m[key][inst] = obj
+		}
+	}
+	return json.Marshal(m)
+}
+
+func (om ObjectMap) UnmarshalJSON(data []byte) error {
+	m := make(map[string]map[ObjectInstance]Object, 0)
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return err
+	}
+
+	for t, sub := range m {
+		key := GetType(t)
+		if om[key] == nil {
+			om[key] = make(map[ObjectInstance]Object)
+		}
+		for inst, obj := range sub {
+			om[key][inst] = obj
+		}
+	}
+	return nil
 }

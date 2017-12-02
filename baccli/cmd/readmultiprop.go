@@ -57,13 +57,13 @@ func readMulti(cmd *cobra.Command, args []string) {
 	}
 
 	for _, d := range resp {
-		dest := &d
+		dest := d
 
 		rp := types.ReadPropertyData{
 			Object: types.Object{
 				ID: types.ObjectID{
 					Type:     8,
-					Instance: uint32(deviceID),
+					Instance: types.ObjectInstance(deviceID),
 				},
 				Properties: []types.Property{
 					types.Property{
@@ -74,7 +74,7 @@ func readMulti(cmd *cobra.Command, args []string) {
 			},
 		}
 
-		out, err := c.ReadProperty(&dest.Addr, rp)
+		out, err := c.ReadProperty(dest, rp)
 		if err != nil {
 			log.Fatal(err)
 			return
@@ -107,7 +107,7 @@ func readMulti(cmd *cobra.Command, args []string) {
 			}
 		}
 
-		x, err := c.ReadMultiProperty(&dest.Addr, rpm)
+		x, err := c.ReadMultiProperty(dest, rpm)
 		if err != nil {
 			log.Println(err)
 		}

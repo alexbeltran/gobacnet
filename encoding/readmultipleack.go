@@ -65,7 +65,10 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 
 func (d *Decoder) ReadMultiplePropertyAck(data *bactype.ReadMultipleProperty) error {
 	err := d.objectsWithData(&data.Objects)
-	return err
+	if err != nil {
+		d.err = err
+	}
+	return d.Error()
 }
 
 func (d *Decoder) bacError(errorClass, errorCode *uint32) error {
@@ -153,6 +156,14 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 			// Tag 4 - Opening Tag
 			expectedTag = 4
 			if tag != expectedTag {
+				if tag == 5 {
+					var class, code uint32
+					err := d.bacError(&class, &code)
+					if err != nil {
+						return err
+					}
+					return fmt.Errorf("Class %d Code %d", class, code)
+				}
 				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
 			}
 			if !meta.isOpening() {

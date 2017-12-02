@@ -12,7 +12,7 @@ const (
 	ObjectName       uint32 = 77
 	ObjectReference  uint32 = 78
 	ObjectType       uint32 = 79
-	PresentValue     uint32 = 86
+	PresentValue     uint32 = 85
 	Units            uint32 = 117
 )
 

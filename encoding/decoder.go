@@ -129,11 +129,11 @@ func (d *Decoder) tagNumberAndValue() (tag uint8, meta tagMeta, value uint32) {
 	return tag, meta, d.value(meta)
 }
 
-func (d *Decoder) objectId() (objectType bactype.ObjectType, instance uint32) {
+func (d *Decoder) objectId() (objectType bactype.ObjectType, instance bactype.ObjectInstance) {
 	var value uint32
 	d.decode(&value)
 	objectType = bactype.ObjectType((value >> InstanceBits) & MaxObject)
-	instance = value & MaxInstance
+	instance = bactype.ObjectInstance(value & MaxInstance)
 	return
 }
 

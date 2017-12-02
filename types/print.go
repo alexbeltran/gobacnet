@@ -11,13 +11,67 @@ import (
 const defaultSpacing = 4
 
 const (
-	Device ObjectType = 8
-	File   ObjectType = 10
+	AnalogInput       ObjectType = 0
+	AnalogOutput      ObjectType = 1
+	AnalogValue       ObjectType = 2
+	BinaryInput       ObjectType = 3
+	BinaryOutput      ObjectType = 4
+	BinaryValue       ObjectType = 5
+	DeviceType        ObjectType = 8
+	File              ObjectType = 10
+	NotificationClass ObjectType = 15
+	MultiStateValue   ObjectType = 19
+	TrendLog          ObjectType = 20
+)
+
+const (
+	AnalogInputStr       = "Analog Input"
+	AnalogOutputStr      = "Analog Output"
+	AnalogValueStr       = "Analog Value"
+	BinaryInputStr       = "Binary Input"
+	BinaryOutputStr      = "Binary Output"
+	BinaryValueStr       = "Binary Value"
+	DeviceTypeStr        = "Device"
+	FileStr              = "File"
+	NotificationClassStr = "Notification Class"
+	MultiStateValueStr   = "Multi-State Value"
+	TrendLogStr          = "Trend Log"
 )
 
 var objTypeMap = map[ObjectType]string{
-	Device: "Device",
-	File:   "File",
+	AnalogInput:       AnalogInputStr,
+	AnalogOutput:      AnalogOutputStr,
+	AnalogValue:       AnalogValueStr,
+	BinaryInput:       BinaryInputStr,
+	BinaryOutput:      BinaryOutputStr,
+	BinaryValue:       BinaryValueStr,
+	DeviceType:        DeviceTypeStr,
+	File:              FileStr,
+	NotificationClass: NotificationClassStr,
+	MultiStateValue:   MultiStateValueStr,
+	TrendLog:          TrendLogStr,
+}
+
+var objStrTypeMap = map[string]ObjectType{
+	AnalogInputStr:       AnalogInput,
+	AnalogOutputStr:      AnalogOutput,
+	AnalogValueStr:       AnalogValue,
+	BinaryInputStr:       BinaryInput,
+	BinaryOutputStr:      BinaryOutput,
+	BinaryValueStr:       BinaryValue,
+	DeviceTypeStr:        DeviceType,
+	FileStr:              File,
+	NotificationClassStr: NotificationClass,
+	MultiStateValueStr:   MultiStateValue,
+	TrendLogStr:          TrendLog,
+}
+
+func GetType(s string) ObjectType {
+	t, ok := objStrTypeMap[s]
+	if !ok {
+		return 0
+	}
+	return t
 }
 
 func (t ObjectType) String() string {
@@ -25,7 +79,7 @@ func (t ObjectType) String() string {
 	if !ok {
 		return fmt.Sprintf("Unknown (%d)", t)
 	}
-	return fmt.Sprintf("%s (%d)", s, t)
+	return fmt.Sprintf("%s", s)
 }
 
 // String returns a pretty print of the ObjectID structure

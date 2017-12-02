@@ -16,7 +16,6 @@ package cmd
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 
 	"github.com/spf13/viper"
@@ -25,6 +24,8 @@ import (
 	"github.com/alexbeltran/gobacnet/property"
 	"github.com/alexbeltran/gobacnet/types"
 	"github.com/spf13/cobra"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // Flags
@@ -72,7 +73,7 @@ func readProp(cmd *cobra.Command, args []string) {
 		log.Fatal("Device id was not found on the network.")
 	}
 
-	dest := &resp[0]
+	dest := resp[0]
 
 	var propInt uint32
 	// Check to see if an int was passed
@@ -94,7 +95,7 @@ func readProp(cmd *cobra.Command, args []string) {
 		Object: types.Object{
 			ID: types.ObjectID{
 				Type:     types.ObjectType(objectType),
-				Instance: uint32(objectID),
+				Instance: types.ObjectInstance(objectID),
 			},
 			Properties: []types.Property{
 				types.Property{
@@ -104,8 +105,11 @@ func readProp(cmd *cobra.Command, args []string) {
 			},
 		},
 	}
-	out, err := c.ReadProperty(&dest.Addr, rp)
+	out, err := c.ReadProperty(dest, rp)
 	if err != nil {
+		if rp.Object.Properties[0].Type == property.ObjectList {
+			log.Error("Note: ObjectList reads may need to be broken up into multiple reads due to length. Read index 0 for array length")
+		}
 		log.Fatal(err)
 	}
 	fmt.Println(out.Object.Properties[0].Data)
