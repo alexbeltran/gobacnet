@@ -35,12 +35,11 @@ import (
 	"encoding/json"
 	"log"
 	"testing"
-	"time"
 
 	"github.com/alexbeltran/gobacnet/types"
 )
 
-const interfaceName = "eth1"
+const interfaceName = "eth0"
 
 // TestMain are general test
 func TestMain(t *testing.T) {
@@ -80,29 +79,17 @@ func TestGetBroadcast(t *testing.T) {
 }
 
 func TestReadPropertyService(t *testing.T) {
-	c, err := NewClient(interfaceName, DefaultPort+1)
+	c, err := NewClient(interfaceName, DefaultPort)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer c.Close()
-	time.Sleep(time.Duration(1) * time.Second)
 
-	var mac []byte
-	var adr []byte
-	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
-	json.Unmarshal([]byte("\"HQ==\""), &adr)
-	log.Println(mac)
-	dest := types.Address{
-		Net:    2428,
-		Len:    1,
-		MacLen: 6,
-		Mac:    mac,
-		Adr:    adr,
-	}
+	dev, err := c.WhoIs(1234, 1234)
 	read := types.ReadPropertyData{
 		Object: types.Object{
 			ID: types.ObjectID{
-				Type:     0,
+				Type:     types.AnalogValue,
 				Instance: 1,
 			},
 			Properties: []types.Property{
@@ -113,7 +100,7 @@ func TestReadPropertyService(t *testing.T) {
 			},
 		},
 	}
-	resp, err := c.ReadProperty(types.Device{Addr: dest}, read)
+	resp, err := c.ReadProperty(dev[0], read)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -128,15 +115,13 @@ func TestMac(t *testing.T) {
 }
 
 func TestWhoIs(t *testing.T) {
-	time.Sleep(time.Duration(1) * time.Second)
 	c, err := NewClient(interfaceName, DefaultPort)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = c.WhoIs(242800, 242900)
+	_, err = c.WhoIs(1230, 1235)
 	if err != nil {
 		t.Fatal(err)
 	}
-	time.Sleep(time.Duration(30) * time.Second)
 	c.Close()
 }
