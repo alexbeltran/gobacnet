@@ -81,13 +81,32 @@ func TestGetBroadcast(t *testing.T) {
 	}
 }
 
-func TestReadPropertyService(t *testing.T) {
+func TestMac(t *testing.T) {
+	var mac []byte
+	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
+	l := len(mac)
+	p := uint16(mac[l-1])<<8 | uint16(mac[l-1])
+	log.Printf("%d", p)
+}
+
+func TestServices(t *testing.T) {
 	c, err := NewClient(interfaceName, DefaultPort)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer c.Close()
 
+	t.Run("Read Property", func(t *testing.T) {
+		testReadPropertyService(c, t)
+	})
+
+	t.Run("Who Is", func(t *testing.T) {
+		testWhoIs(c, t)
+	})
+
+}
+
+func testReadPropertyService(c *Client, t *testing.T) {
 	dev, err := c.WhoIs(testServer, testServer)
 	read := types.ReadPropertyData{
 		Object: types.Object{
@@ -110,22 +129,12 @@ func TestReadPropertyService(t *testing.T) {
 	t.Logf("Response: %v", resp.Object.Properties[0].Data)
 }
 
-func TestMac(t *testing.T) {
-	var mac []byte
-	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
-	l := len(mac)
-	p := uint16(mac[l-1])<<8 | uint16(mac[l-1])
-	log.Printf("%d", p)
-}
-
-func TestWhoIs(t *testing.T) {
-	c, err := NewClient(interfaceName, DefaultPort)
+func testWhoIs(c *Client, t *testing.T) {
+	dev, err := c.WhoIs(testServer-1, testServer+1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = c.WhoIs(testServer-1, testServer+1)
-	if err != nil {
-		t.Fatal(err)
+	if len(dev) == 0 {
+		t.Fatalf("Unable to find device id %d", testServer)
 	}
-	c.Close()
 }
