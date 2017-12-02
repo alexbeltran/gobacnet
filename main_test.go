@@ -42,6 +42,7 @@ import (
 )
 
 const interfaceName = "eth0"
+const testServer = 1234
 
 // TestMain are general test
 func TestMain(t *testing.T) {
@@ -87,7 +88,7 @@ func TestReadPropertyService(t *testing.T) {
 	}
 	defer c.Close()
 
-	dev, err := c.WhoIs(1234, 1234)
+	dev, err := c.WhoIs(testServer, testServer)
 	read := types.ReadPropertyData{
 		Object: types.Object{
 			ID: types.ObjectID{
@@ -106,6 +107,7 @@ func TestReadPropertyService(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	t.Logf("Response: %v", resp.Object.Properties[0].Data)
 }
 
 func TestMac(t *testing.T) {
@@ -121,7 +123,7 @@ func TestWhoIs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = c.WhoIs(1230, 1235)
+	_, err = c.WhoIs(testServer-1, testServer+1)
 	if err != nil {
 		t.Fatal(err)
 	}
