@@ -113,8 +113,8 @@ func NewClient(inter string, port int) (*Client, error) {
 
 	c.tsm = tsm.New(DefaultStateSize)
 	options := []utsm.ManagerOption{
-		utsm.DefaultSubscriberTimeout(time.Second * time.Duration(1)),
-		utsm.DefaultSubscriberLastReceivedTimeout(time.Second * time.Duration(1)),
+		utsm.DefaultSubscriberTimeout(time.Second * time.Duration(10)),
+		utsm.DefaultSubscriberLastReceivedTimeout(time.Second * time.Duration(2)),
 	}
 	c.utsm = utsm.NewManager(options...)
 	udp, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", c.Port))

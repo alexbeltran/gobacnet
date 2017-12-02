@@ -36,10 +36,13 @@ import (
 	"log"
 	"testing"
 
+	"github.com/alexbeltran/gobacnet/property"
+
 	"github.com/alexbeltran/gobacnet/types"
 )
 
 const interfaceName = "eth0"
+const testServer = 1234
 
 // TestMain are general test
 func TestMain(t *testing.T) {
@@ -78,34 +81,6 @@ func TestGetBroadcast(t *testing.T) {
 	}
 }
 
-func TestReadPropertyService(t *testing.T) {
-	c, err := NewClient(interfaceName, DefaultPort)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer c.Close()
-
-	dev, err := c.WhoIs(1234, 1234)
-	read := types.ReadPropertyData{
-		Object: types.Object{
-			ID: types.ObjectID{
-				Type:     types.AnalogValue,
-				Instance: 1,
-			},
-			Properties: []types.Property{
-				types.Property{
-					Type:       85, // Present value
-					ArrayIndex: ArrayAll,
-				},
-			},
-		},
-	}
-	resp, err := c.ReadProperty(dev[0], read)
-	if err != nil {
-		t.Fatal(err)
-	}
-	t.Logf("%v", resp.Object.Properties[0].Data)
-}
 func TestMac(t *testing.T) {
 	var mac []byte
 	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
@@ -114,14 +89,56 @@ func TestMac(t *testing.T) {
 	log.Printf("%d", p)
 }
 
-func TestWhoIs(t *testing.T) {
+func TestServices(t *testing.T) {
 	c, err := NewClient(interfaceName, DefaultPort)
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = c.WhoIs(1230, 1235)
+	defer c.Close()
+
+	t.Run("Read Property", func(t *testing.T) {
+		testReadPropertyService(c, t)
+	})
+
+	t.Run("Who Is", func(t *testing.T) {
+		testWhoIs(c, t)
+	})
+
+}
+
+func testReadPropertyService(c *Client, t *testing.T) {
+	dev, err := c.WhoIs(testServer, testServer)
+	read := types.ReadPropertyData{
+		Object: types.Object{
+			ID: types.ObjectID{
+				Type:     types.AnalogValue,
+				Instance: 1,
+			},
+			Properties: []types.Property{
+				types.Property{
+					Type:       property.ObjectName, // Present value
+					ArrayIndex: ArrayAll,
+				},
+			},
+		},
+	}
+	if len(dev) == 0 {
+		t.Fatalf("Unable to find device id %d", testServer)
+	}
+
+	resp, err := c.ReadProperty(dev[0], read)
 	if err != nil {
 		t.Fatal(err)
 	}
-	c.Close()
+	t.Logf("Response: %v", resp.Object.Properties[0].Data)
+}
+
+func testWhoIs(c *Client, t *testing.T) {
+	dev, err := c.WhoIs(testServer-1, testServer+1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(dev) == 0 {
+		t.Fatalf("Unable to find device id %d", testServer)
+	}
 }
