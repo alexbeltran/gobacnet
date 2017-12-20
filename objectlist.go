@@ -24,6 +24,11 @@ func (c *Client) objectListLen(dev bactype.Device) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
+	if len(resp.Object.Properties) == 0 {
+		return 0, fmt.Errorf("no data was returned")
+	}
+
 	data, ok := resp.Object.Properties[0].Data.(uint32)
 	if !ok {
 		return 0, fmt.Errorf("Unable to get object length")
