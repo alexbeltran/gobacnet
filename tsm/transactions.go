@@ -40,7 +40,7 @@ import (
 
 const freeID = 0
 
-// MaxTransaction is the default maximium number of transactions that can occur
+// MaxTransaction is the default max number of transactions that can occur
 // concurrently
 const MaxTransaction = 255
 const invalidID = 0
@@ -59,46 +59,56 @@ type state struct {
 // TSM is the transaction state manager. It handles passing data to other
 // processes and keeping track of what transactions are currently processed
 type TSM struct {
-	states []state
 	size   int
 	currID int
-	count  int
-	mutex  *sync.Mutex
+	mutex  sync.Mutex
+	states map[int]*state
+	pool   sync.Pool
+	free   struct {
+		id    chan int
+		space chan struct{}
+	}
 }
 
 // New creates a new transaction manager
 func New(size int) *TSM {
-	t := TSM{}
-	t.size = size
-	t.states = make([]state, size)
-	t.currID = 1
-	t.mutex = &sync.Mutex{}
-
-	// Initialize the channel pipeline
-	for i := range t.states {
-		t.states[i].data = make(chan []byte, 1)
+	t := &TSM{
+		size:   size,
+		states: make(map[int]*state),
+		pool: sync.Pool{
+			New: func() interface{} {
+				s := new(state)
+				s.data = make(chan []byte)
+				return s
+			},
+		},
 	}
-	return &t
-}
 
-// incrCursor moves the current possible id by one. It handles wrap around
-func (t *TSM) incrCursor() {
-	t.currID++
-	if t.currID == invalidID || t.currID >= MaxTransaction {
-		t.currID = invalidID + 1
+	// Generate free ids.
+	t.free.id = make(chan int, MaxTransaction)
+	for i := 0; i < MaxTransaction; i++ {
+		t.free.id <- i
 	}
+
+	// Generate free space
+	t.free.space = make(chan struct{}, size)
+	for i := 0; i < size; i++ {
+		t.free.space <- struct{}{}
+	}
+
+	return t
 }
 
 // Send data to invoked id
 func (t *TSM) Send(id int, b []byte) error {
 	t.mutex.Lock()
-	i, err := t.find(id)
+	s, ok := t.states[id]
 	t.mutex.Unlock()
-	if err != nil {
-		return err
-	}
-	t.states[i].data <- b
 
+	if !ok {
+		return fmt.Errorf("id is not receiving")
+	}
+	s.data <- b
 	return nil
 }
 
@@ -106,11 +116,11 @@ func (t *TSM) Send(id int, b []byte) error {
 // period has passed then an error is returned
 func (t *TSM) Receive(id int, timeout time.Duration) ([]byte, error) {
 	t.mutex.Lock()
-	i, err := t.find(id)
+	s, ok := t.states[id]
 	t.mutex.Unlock()
 
-	if err != nil {
-		return nil, err
+	if !ok {
+		return nil, fmt.Errorf("id is not sending")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -118,7 +128,7 @@ func (t *TSM) Receive(id int, timeout time.Duration) ([]byte, error) {
 
 	// Wait for data
 	select {
-	case b := <-t.states[i].data:
+	case b := <-s.data:
 		return b, nil
 	case <-ctx.Done():
 		return nil, fmt.Errorf("Receive timed out")
@@ -126,90 +136,42 @@ func (t *TSM) Receive(id int, timeout time.Duration) ([]byte, error) {
 
 }
 
-// GetFree returns the invoke id that was used to save the state of this connection.
-func (t *TSM) GetFree() (int, error) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	id, err := t.getFreeID()
-	if err != nil {
-		return id, err
+// ID returns the invoke id that was used to save the state of this connection.
+func (t *TSM) ID(ctx context.Context) (int, error) {
+	var id int
+	select {
+	case <-t.free.space:
+		// got a free spot, lets try and get a free id
+		select {
+		case <-t.free.id:
+		case err := <-ctx.Done():
+			t.free.space <- struct{}{}
+			return 0, fmt.Errorf("unable to get a free id: %v", err)
+		}
+	case err := <-ctx.Done():
+		return 0, fmt.Errorf("no free space: %v", err)
 	}
-	indx, err := t.getFreeIndex()
-	if err != nil {
-		return id, err
-	}
 
-	t.states[indx].id = id
-	t.states[indx].state = idle
-	t.states[indx].requestTimer = 0 // TODO: apdu_timeout
-	t.count = t.count + 1
-
+	// skip error checking, since we control new generation and what is put in the pool.
+	s := t.pool.Get().(*state)
+	s.state = idle
+	s.requestTimer = 0 // TODO: apdu_timeout
+	t.states[id] = s
 	return id, nil
 }
 
-// FreeID allows the id to be reused in the transaction manager
-func (t *TSM) FreeID(id int) error {
+// Put allows the id to be reused in the transaction manager
+func (t *TSM) Put(id int) error {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
-	i, err := t.find(id)
-	if err != nil {
-		return err
+	s, ok := t.states[id]
+	if !ok {
+		return fmt.Errorf("id %d does not exist in the transactions", id)
 	}
-
-	t.states[i].id = invalidID
-	t.count--
+	t.pool.Put(s)
+	t.free.id <- id
+	t.free.space <- struct{}{}
+	delete(t.states, id)
 	return nil
-}
-
-// GetFreeID returns the first available id. If none is available then MaxTransaction
-// is returned
-func (t *TSM) getFreeID() (int, error) {
-	if !t.available() {
-		return invalidID, fmt.Errorf("The TSM is full, there are no available ids")
-	}
-	found := false
-	counter := 0
-	for !found && counter < MaxTransaction {
-		_, err := t.find(t.currID)
-
-		// The cursor id is being used, we will skip it
-		if err == nil {
-			t.incrCursor()
-			// Cursor is free
-		} else {
-			id := t.currID
-			t.incrCursor()
-			return id, nil
-		}
-		counter++
-	}
-
-	return invalidID, fmt.Errorf("there are no available ids")
-}
-
-// getFreeIndex returns the first position in the array that is not being used.
-func (t *TSM) getFreeIndex() (int, error) {
-	for i, s := range t.states {
-		if s.id == invalidID {
-			return i, nil
-		}
-	}
-	return len(t.states), fmt.Errorf("the buffer is full")
-}
-
-// find returns the index where the invoke id has occurred.
-func (t *TSM) find(id int) (int, error) {
-	for i, s := range t.states {
-		if s.id == id {
-			return i, nil
-		}
-	}
-	return 0, fmt.Errorf("Unable to find index")
-}
-
-// available returns true if we can invoke a new id.
-func (t *TSM) available() (status bool) {
-	return t.count < len(t.states)
 }

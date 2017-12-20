@@ -32,6 +32,7 @@ License.
 package tsm
 
 import (
+	"context"
 	"testing"
 	"time"
 )
@@ -39,34 +40,37 @@ import (
 func TestTSM(t *testing.T) {
 	size := 3
 	tsm := New(size)
+	ctx := context.Background()
 	var err error
 	for i := 0; i < size-1; i++ {
-		_, err = tsm.GetFree()
+		_, err = tsm.ID(ctx)
 		if err != nil {
 			t.Logf("Getting ID %d:", tsm.currID)
 			t.Fatal(err)
 		}
 	}
 
-	id, err := tsm.GetFree()
+	id, err := tsm.ID(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// The buffer should be full at this point.
-	_, err = tsm.GetFree()
+	ctx, cancel := context.WithTimeout(ctx, time.Millisecond)
+	defer cancel()
+	_, err = tsm.ID(ctx)
 	if err == nil {
 		t.Fatal("Buffer was full but an id was given ")
 	}
 
 	// Free an ID
-	err = tsm.FreeID(id)
+	err = tsm.Put(id)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// Now we should be able to get a new id since we free id
-	_, err = tsm.GetFree()
+	_, err = tsm.ID(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,7 +84,7 @@ func TestDataTransaction(t *testing.T) {
 	var err error
 
 	for i := 0; i < size-1; i++ {
-		ids[i], err = tsm.GetFree()
+		ids[i], err = tsm.ID(context.Background())
 		if err != nil {
 			t.Logf("Getting ID %d:", tsm.currID)
 			t.Fatal(err)
