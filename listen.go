@@ -32,6 +32,7 @@ License.
 package gobacnet
 
 import (
+	"fmt"
 	"net"
 
 	log "github.com/sirupsen/logrus"
@@ -122,7 +123,11 @@ func (c *Client) handleMsg(src *net.UDPAddr, b []byte) {
 				return
 			}
 		case bactype.Error:
-			log.Error("Error Class %d Code %d", apdu.Error.Class, apdu.Error.Code)
+			err := fmt.Errorf("Error Class %d Code %d", apdu.Error.Class, apdu.Error.Code)
+			err = c.tsm.Send(int(apdu.InvokeId), err)
+			if err != nil {
+				log.Warningf("unable to send error to %d: %v", apdu.InvokeId, err)
+			}
 		default:
 			// Ignore it
 			log.WithFields(log.Fields{"raw": b}).Debug("An ignored packet went through")
