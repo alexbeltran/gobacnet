@@ -51,13 +51,12 @@ type state struct {
 	id           int
 	state        int
 	requestTimer int
-	data         chan []byte
+	data         chan interface{}
 }
 
 // TSM is the transaction state manager. It handles passing data to other
 // processes and keeping track of what transactions are currently processed
 type TSM struct {
-	size   int
 	mutex  sync.Mutex
 	states map[int]*state
 	pool   sync.Pool
@@ -70,11 +69,10 @@ type TSM struct {
 // New creates a new transaction manager
 func New(size int) *TSM {
 	t := &TSM{
-		size:   size,
 		states: make(map[int]*state), pool: sync.Pool{
 			New: func() interface{} {
 				s := new(state)
-				s.data = make(chan []byte)
+				s.data = make(chan interface{})
 				return s
 			},
 		},
@@ -96,13 +94,13 @@ func New(size int) *TSM {
 }
 
 // Send data to invoked id
-func (t *TSM) Send(id int, b []byte) error {
+func (t *TSM) Send(id int, b interface{}) error {
 	t.mutex.Lock()
 	s, ok := t.states[id]
 	t.mutex.Unlock()
 
 	if !ok {
-		return fmt.Errorf("id is not receiving")
+		return fmt.Errorf("id %d is not receiving", id)
 	}
 	s.data <- b
 	return nil
@@ -110,13 +108,13 @@ func (t *TSM) Send(id int, b []byte) error {
 
 // Receive attempts to receive a byte array from the invoked id. If a time out
 // period has passed then an error is returned
-func (t *TSM) Receive(id int, timeout time.Duration) ([]byte, error) {
+func (t *TSM) Receive(id int, timeout time.Duration) (interface{}, error) {
 	t.mutex.Lock()
 	s, ok := t.states[id]
 	t.mutex.Unlock()
 
 	if !ok {
-		return nil, fmt.Errorf("id is not sending")
+		return nil, fmt.Errorf("id %d is not sending", id)
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
