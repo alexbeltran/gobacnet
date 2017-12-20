@@ -38,8 +38,6 @@ import (
 	"time"
 )
 
-const freeID = 0
-
 // MaxTransaction is the default max number of transactions that can occur
 // concurrently
 const MaxTransaction = 255
@@ -60,7 +58,6 @@ type state struct {
 // processes and keeping track of what transactions are currently processed
 type TSM struct {
 	size   int
-	currID int
 	mutex  sync.Mutex
 	states map[int]*state
 	pool   sync.Pool
@@ -74,8 +71,7 @@ type TSM struct {
 func New(size int) *TSM {
 	t := &TSM{
 		size:   size,
-		states: make(map[int]*state),
-		pool: sync.Pool{
+		states: make(map[int]*state), pool: sync.Pool{
 			New: func() interface{} {
 				s := new(state)
 				s.data = make(chan []byte)
@@ -86,7 +82,7 @@ func New(size int) *TSM {
 
 	// Generate free ids.
 	t.free.id = make(chan int, MaxTransaction)
-	for i := 0; i < MaxTransaction; i++ {
+	for i := invalidID + 1; i < MaxTransaction; i++ {
 		t.free.id <- i
 	}
 
@@ -143,7 +139,7 @@ func (t *TSM) ID(ctx context.Context) (int, error) {
 	case <-t.free.space:
 		// got a free spot, lets try and get a free id
 		select {
-		case <-t.free.id:
+		case id = <-t.free.id:
 		case err := <-ctx.Done():
 			t.free.space <- struct{}{}
 			return 0, fmt.Errorf("unable to get a free id: %v", err)
