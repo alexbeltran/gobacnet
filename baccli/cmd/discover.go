@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/alexbeltran/gobacnet"
 	"github.com/alexbeltran/gobacnet/types"
@@ -70,10 +71,12 @@ func discover(cmd *cobra.Command, args []string) {
 	defer c.Close()
 
 	log.Printf("Discovering on interface %s and port %d", Interface, Port)
+	start := time.Now()
+
 	var wg sync.WaitGroup
 	wg.Add(concurrency)
-	scan := make(chan []types.Device, concurrency*2)
-	merge := make(chan types.Device, concurrency*2)
+	scan := make(chan []types.Device, concurrency)
+	merge := make(chan types.Device, concurrency)
 
 	// Further discovers new points found in who is
 	for i := 0; i < concurrency; i++ {
@@ -121,7 +124,15 @@ func discover(cmd *cobra.Command, args []string) {
 	wg.Wait()
 	close(merge)
 
-	save(output, printStdout, results)
+	err = save(output, printStdout, results)
+	if err != nil {
+		log.Errorf("unable to save document: %v", err)
+	}
+	delta := time.Now().Sub(start)
+	log.Info("Discovery completed in %s", delta)
+	if !printStdout {
+		log.Infof("Results saved in %s", output)
+	}
 }
 
 func init() {
