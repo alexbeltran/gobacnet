@@ -38,8 +38,9 @@ import (
 
 	"github.com/alexbeltran/gobacnet/encoding"
 	bactype "github.com/alexbeltran/gobacnet/types"
-	log "github.com/sirupsen/logrus"
 )
+
+const maxReattempt = 2
 
 func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
 	var out bactype.ReadMultipleProperty
@@ -70,17 +71,18 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 	})
 	enc.ReadMultipleProperty(uint8(id), rp)
 	if enc.Error() != nil {
-		return out, err
+		return out, fmt.Errorf("encoding read multiple property failed: %v", err)
 	}
 
 	pack := enc.Bytes()
 	if dev.MaxApdu < uint32(len(pack)) {
-		log.WithFields(log.Fields{"maxApdu": dev.MaxApdu, "apdu": len(pack)}).Debug("Package is too large")
-		return out, fmt.Errorf("Read multiple property is too large.")
+		return out, fmt.Errorf("read multiple property is too large")
 	}
 	// the value filled doesn't matter. it just needs to be non nil
 	err = fmt.Errorf("go")
-	for count := 0; err != nil && count < 2; count++ {
+
+	count := 0
+	for ; err != nil && count < maxReattempt; count++ {
 		var b []byte
 		_, err = c.Send(dev.Addr, pack)
 		if err != nil {
@@ -89,6 +91,7 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 
 		b, err = c.tsm.Receive(id, time.Duration(5)*time.Second)
 		if err != nil {
+			err = fmt.Errorf("unable to receive id %d: %v", id, err)
 			continue
 		}
 		dec := encoding.NewDecoder(b)
@@ -101,5 +104,5 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 		}
 		return out, err
 	}
-	return out, err
+	return out, fmt.Errorf("failed %d tries: %v", count, err)
 }
