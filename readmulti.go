@@ -32,6 +32,7 @@ License.
 package gobacnet
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -42,10 +43,15 @@ import (
 
 func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
 	var out bactype.ReadMultipleProperty
-	id, err := c.tsm.GetFree()
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	id, err := c.tsm.ID(ctx)
 	if err != nil {
 		return out, err
 	}
+	defer c.tsm.Put(id)
+
 	udp, err := c.LocalUDPAddress()
 	if err != nil {
 		return out, err
