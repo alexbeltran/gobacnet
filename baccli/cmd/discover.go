@@ -16,18 +16,21 @@ package cmd
 
 import (
 	"encoding/json"
-	"log"
 	"os"
+	"sync"
 
 	"github.com/alexbeltran/gobacnet"
 	"github.com/alexbeltran/gobacnet/types"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 var scanSize uint32
 var printStdout bool
+var verbose bool
+var concurrency int
+var output string
 
-// discoverCmd represents the discover command
 var discoverCmd = &cobra.Command{
 	Use:   "discover",
 	Short: "discover finds all devices on the network saves results",
@@ -36,94 +39,89 @@ var discoverCmd = &cobra.Command{
 	Run: discover,
 }
 
-const maxWorkerPool = 20
-
-// gather is a worker who manages getting each devices objects and combining it
-// to a completed channel
-func gather(client *gobacnet.Client, devChan chan []types.Device, complete chan []types.Device) {
-	var devices []types.Device
+func save(outfile string, stdout bool, results interface{}) error {
+	var file *os.File
 	var err error
-	for devs := range devChan {
-		results := make(chan error, len(devs))
+	if printStdout {
+		file = os.Stdout
+	} else {
+		file, err = os.Create(outfile)
 
-		// Query all of the devices
-		for i, d := range devs {
-			go func(i int, d types.Device) {
-				log.Printf("Discover Device: %d", d.ID.Instance)
-				devs[i], err = client.Objects(d)
-				results <- err
-			}(i, d)
+		if err != nil {
+			return err
 		}
-
-		// Aggregate the responses
-		for i := 0; i < len(devs); i++ {
-			err = <-results
-			if err != nil {
-				log.Println(err)
-			}
-		}
-		devices = append(devices, devs...)
+		defer file.Close()
 	}
-	complete <- devices
-}
-
-func scan(c *gobacnet.Client, startRange, endRange int, dev chan []types.Device) error {
-	log.Printf("Scanning %d to %d\n", startRange, endRange)
-	subsetDevices, err := c.WhoIs(startRange, endRange)
-	if err != nil {
-		return err
-	}
-	dev <- subsetDevices
-	return nil
+	enc := json.NewEncoder(file)
+	enc.SetIndent("", "   ")
+	return enc.Encode(results)
 }
 
 func discover(cmd *cobra.Command, args []string) {
+	log := logrus.New()
+	log.Formatter = &logrus.TextFormatter{}
+	log.Out = os.Stdout
+	log.SetLevel(logrus.DebugLevel)
+
 	c, err := gobacnet.NewClient(Interface, Port)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer c.Close()
 
-	devChan := make(chan []types.Device, maxWorkerPool)
-	finish := make(chan []types.Device, 1)
-	go gather(c, devChan, finish)
-	incr := int(scanSize)
-	i := 0
+	log.Printf("Discovering on interface %s and port %d", Interface, Port)
+	var wg sync.WaitGroup
+	wg.Add(concurrency)
+	scan := make(chan []types.Device, concurrency*2)
+	merge := make(chan types.Device, concurrency*2)
 
-	var startRange, endRange int
-	for i = 0; i < types.MaxInstance/int(incr); i++ {
+	// Further discovers new points found in who is
+	for i := 0; i < concurrency; i++ {
+		go func() {
+			for devs := range scan {
+				for _, d := range devs {
+					dev, err := c.Objects(d)
+					log.Printf("Found device: %d", d.ID)
+
+					if err != nil {
+						log.Print(err)
+						continue
+					}
+					merge <- dev
+				}
+			}
+			wg.Done()
+		}()
+
+	}
+
+	// combine results
+	var results []types.Device
+	go func() {
+		for dev := range merge {
+			results = append(results, dev)
+		}
+	}()
+
+	// Initiates who is
+	var startRange, endRange, i int
+	incr := int(scanSize)
+	for i = 0; i < types.MaxInstance/int(scanSize); i++ {
 		startRange = i * incr
 		endRange = (i+1)*incr - 1
-		err = scan(c, startRange, endRange, devChan)
+		log.Infof("Scanning %d to %d", startRange, endRange)
+		scanned, err := c.WhoIs(startRange, endRange)
 		if err != nil {
-			log.Print(err)
+			log.Error(err)
+			continue
 		}
+		scan <- scanned
 	}
+	close(scan)
+	wg.Wait()
+	close(merge)
 
-	startRange = i * incr
-	endRange = types.MaxInstance
-	err = scan(c, startRange, endRange, devChan)
-	if err != nil {
-		log.Print(err)
-	}
-
-	close(devChan)
-	out := <-finish
-	var file *os.File
-	if printStdout {
-		file = os.Stdout
-	} else {
-		file, err = os.Create("test.json")
-
-		if err != nil {
-			log.Println(err)
-		}
-	}
-	defer file.Close()
-
-	enc := json.NewEncoder(file)
-	enc.SetIndent("", "   ")
-	enc.Encode(out)
+	save(output, printStdout, results)
 }
 
 func init() {
@@ -131,6 +129,12 @@ func init() {
  the number of devices that are being read at once`
 
 	RootCmd.AddCommand(discoverCmd)
-	discoverCmd.Flags().Uint32VarP(&scanSize, "size", "s", 10000, scanSizeDescription)
+	discoverCmd.Flags().Uint32VarP(&scanSize, "size", "s", 1000, scanSizeDescription)
 	discoverCmd.Flags().BoolVar(&printStdout, "stdout", false, "Print to stdout")
+	discoverCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Print to additional debugging information")
+	discoverCmd.Flags().IntVarP(&concurrency, "concurency", "c", 5, `Number of
+  concurrent threads used for scanning the network. A higher number of
+  concurrent workers can result in an oversaturate network but will result in
+  a faster scan. Concurrency must be greater then 2.`)
+	discoverCmd.Flags().StringVarP(&output, "output", "o", "out.json", "Save data to output filename. This field is ignored if stdout is true")
 }
