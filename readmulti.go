@@ -89,11 +89,21 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 			continue
 		}
 
-		b, err = c.tsm.Receive(id, time.Duration(5)*time.Second)
+		raw, err := c.tsm.Receive(id, time.Duration(5)*time.Second)
 		if err != nil {
 			err = fmt.Errorf("unable to receive id %d: %v", id, err)
 			continue
 		}
+
+		switch v := raw.(type) {
+		case error:
+			return out, err
+		case []byte:
+			b = v
+		default:
+			return out, fmt.Errorf("received unknown datatype %T", raw)
+		}
+
 		dec := encoding.NewDecoder(b)
 
 		var apdu bactype.APDU
