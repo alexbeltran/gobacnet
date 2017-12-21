@@ -76,17 +76,26 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 	err = fmt.Errorf("go")
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
+		var out bactype.ReadPropertyData
 		_, err = c.Send(dest.Addr, enc.Bytes())
 		if err != nil {
 			log.Print(err)
 			continue
 		}
 
-		b, err = c.tsm.Receive(id, time.Duration(5)*time.Second)
+		raw, err := c.tsm.Receive(id, time.Duration(5)*time.Second)
 		if err != nil {
 			continue
 		}
-		var out bactype.ReadPropertyData
+		switch v := raw.(type) {
+		case error:
+			return out, err
+		case []byte:
+			b = v
+		default:
+			return out, fmt.Errorf("received unknown datatype %T", raw)
+		}
+
 		dec := encoding.NewDecoder(b)
 
 		var apdu bactype.APDU

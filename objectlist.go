@@ -22,8 +22,13 @@ func (c *Client) objectListLen(dev bactype.Device) (int, error) {
 
 	resp, err := c.ReadProperty(dev, rp)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("reading property failed: %v", err)
 	}
+
+	if len(resp.Object.Properties) == 0 {
+		return 0, fmt.Errorf("no data was returned")
+	}
+
 	data, ok := resp.Object.Properties[0].Data.(uint32)
 	if !ok {
 		return 0, fmt.Errorf("Unable to get object length")
@@ -48,10 +53,10 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 	}
 	resp, err := c.ReadMultiProperty(dev, rpm)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to read multiple property: %v", err)
 	}
 	if len(resp.Objects) == 0 {
-		return nil, fmt.Errorf("No data was returned")
+		return nil, fmt.Errorf("no data was returned")
 	}
 
 	objs := make([]bactype.Object, len(resp.Objects[0].Properties))
@@ -59,7 +64,7 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 	for i, prop := range resp.Objects[0].Properties {
 		id, ok := prop.Data.(bactype.ObjectID)
 		if !ok {
-			return nil, fmt.Errorf("Expected type Object ID, got %T", prop.Data)
+			return nil, fmt.Errorf("expected type Object ID, got %T", prop.Data)
 		}
 		objs[i].ID = id
 	}
@@ -84,7 +89,7 @@ func (c *Client) objectList(dev *bactype.Device) error {
 
 	l, err := c.objectListLen(*dev)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to get list length: %v", err)
 	}
 
 	// Scan size is broken
@@ -96,7 +101,7 @@ func (c *Client) objectList(dev *bactype.Device) error {
 
 		objs, err := c.objectsRange(*dev, start, end)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to retrieve objects between %d and %d: %v", start, end, err)
 		}
 		objectCopy(dev.Objects, objs)
 	}
@@ -105,7 +110,7 @@ func (c *Client) objectList(dev *bactype.Device) error {
 	if start <= end {
 		objs, err := c.objectsRange(*dev, start, end)
 		if err != nil {
-			return err
+			return fmt.Errorf("unable to retrieve objects between %d and %d: %v", start, end, err)
 		}
 		objectCopy(dev.Objects, objs)
 	}
@@ -154,11 +159,11 @@ func (c *Client) objectInformation(dev *bactype.Device) error {
 	for i, r := range resp.Objects {
 		name, ok = r.Properties[0].Data.(string)
 		if !ok {
-			return fmt.Errorf("Incorrect data returned")
+			return fmt.Errorf("expecting string got %T", r.Properties[0].Data)
 		}
 		description, ok = r.Properties[1].Data.(string)
 		if !ok {
-			return fmt.Errorf("Incorrect data returned")
+			return fmt.Errorf("expecting string got %T", r.Properties[1].Data)
 		}
 		obj := dev.Objects[keys[i].Type][keys[i].Instance]
 		obj.Name = name
