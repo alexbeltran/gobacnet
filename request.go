@@ -50,7 +50,7 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 	}
 	defer c.tsm.Put(id)
 
-	udp, err := c.LocalUDPAddress()
+	udp, err := c.localUDPAddress()
 	if err != nil {
 		return bactype.ReadPropertyData{}, err
 	}
@@ -77,7 +77,7 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
 		var out bactype.ReadPropertyData
-		_, err = c.Send(dest.Addr, enc.Bytes())
+		_, err = c.send(dest.Addr, enc.Bytes())
 		if err != nil {
 			log.Print(err)
 			continue

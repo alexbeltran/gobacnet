@@ -69,8 +69,8 @@ const udpVersion = "udp"
 const mtuHeaderLength = 4
 const forwardHeaderLength = 10
 
-// Send packet to destination
-func (c *Client) Send(dest bactype.Address, data []byte) (int, error) {
+// send transfers the raw apdu byte slice to the destination address.
+func (c *Client) send(dest bactype.Address, data []byte) (int, error) {
 	var header bactype.BVLC
 
 	// Set packet type

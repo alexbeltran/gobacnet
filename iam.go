@@ -5,7 +5,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) IAm(dest bactype.Address) error {
+func (c *Client) iAm(dest bactype.Address) error {
 	enc := encoding.NewEncoder()
 	enc.NPDU(
 		bactype.NPDU{
@@ -19,6 +19,6 @@ func (c *Client) IAm(dest bactype.Address) error {
 
 	//	iams := []bactype.ObjectID{bactype.ObjectID{Instance: 1, Type: 5}}
 	//	enc.IAm(iams)
-	_, err := c.Send(dest, enc.Bytes())
+	_, err := c.send(dest, enc.Bytes())
 	return err
 }

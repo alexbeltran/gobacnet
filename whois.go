@@ -40,10 +40,10 @@ import (
 
 func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 	dest := types.UDPToAddress(&net.UDPAddr{
-		IP:   c.BroadcastAddress,
+		IP:   c.broadcastAddress,
 		Port: DefaultPort,
 	})
-	src, _ := c.LocalAddress()
+	src, _ := c.localAddress()
 
 	dest.SetBroadcast(true)
 
@@ -79,7 +79,7 @@ func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 	// Run in parallel
 	errChan := make(chan error)
 	go func() {
-		_, err = c.Send(dest, enc.Bytes())
+		_, err = c.send(dest, enc.Bytes())
 		errChan <- err
 	}()
 	values, err := c.utsm.Subscribe(start, end)

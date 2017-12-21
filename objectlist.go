@@ -174,9 +174,11 @@ func (c *Client) objectInformation(dev *bactype.Device) error {
 	return nil
 }
 
-// Objects scans for all objects within the device. It will also gather
-// additional information from the object such as the name and description of
-// the objects.
+// Objects retrieves all of the objects within the given device and returns a
+// device with these objects. Along with the list of objects, it will also
+// gather additional information from the object such as the name and
+// description of the objects. The device returned contains all of the name and
+// description fields for all objects
 func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
 	err := c.objectList(&dev)
 	if err != nil {

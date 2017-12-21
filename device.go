@@ -42,13 +42,13 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const DefaultStateSize = 20
+const defaultStateSize = 20
 
 type Client struct {
-	Interface        *net.Interface
-	MyAddress        string
-	BroadcastAddress net.IP
-	Port             int
+	netInterface     *net.Interface
+	myAddress        string
+	broadcastAddress net.IP
+	port             int
 	tsm              *tsm.TSM
 	utsm             *utsm.Manager
 	listener         *net.UDPConn
@@ -73,11 +73,11 @@ func NewClient(inter string, port int) (*Client, error) {
 	if err != nil {
 		return c, err
 	}
-	c.Interface = i
+	c.netInterface = i
 	if port == 0 {
-		c.Port = DefaultPort
+		c.port = DefaultPort
 	} else {
-		c.Port = port
+		c.port = port
 	}
 	uni, err := i.Addrs()
 	if err != nil {
@@ -89,35 +89,35 @@ func NewClient(inter string, port int) (*Client, error) {
 	}
 
 	// Clear out the value
-	c.MyAddress = ""
+	c.myAddress = ""
 	// Find the first IP4 ip
 	for _, adr := range uni {
 		IP, _, _ := net.ParseCIDR(adr.String())
 
 		// To4 is non nil when the type is ip4
 		if IP.To4() != nil {
-			c.MyAddress = adr.String()
+			c.myAddress = adr.String()
 			break
 		}
 	}
-	if len(c.MyAddress) == 0 {
+	if len(c.myAddress) == 0 {
 		// We couldn't find a interface or all of them are ip6
 		return nil, fmt.Errorf("No valid broadcasting address was found on interface %s", inter)
 	}
 
-	broadcast, err := getBroadcast(c.MyAddress)
+	broadcast, err := getBroadcast(c.myAddress)
 	if err != nil {
 		return c, err
 	}
-	c.BroadcastAddress = broadcast
+	c.broadcastAddress = broadcast
 
-	c.tsm = tsm.New(DefaultStateSize)
+	c.tsm = tsm.New(defaultStateSize)
 	options := []utsm.ManagerOption{
 		utsm.DefaultSubscriberTimeout(time.Second * time.Duration(10)),
 		utsm.DefaultSubscriberLastReceivedTimeout(time.Second * time.Duration(2)),
 	}
 	c.utsm = utsm.NewManager(options...)
-	udp, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", c.Port))
+	udp, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", c.port))
 	conn, err := net.ListenUDP("udp", udp)
 	if err != nil {
 		return nil, err
@@ -127,26 +127,26 @@ func NewClient(inter string, port int) (*Client, error) {
 	log.SetLevel(log.ErrorLevel)
 
 	// Print out relevant information
-	log.Debug(fmt.Sprintf("Broadcast Address: %v", c.BroadcastAddress))
-	log.Debug(fmt.Sprintf("Local Address: %s", c.MyAddress))
-	log.Debug(fmt.Sprintf("Port: %x", c.Port))
+	log.Debug(fmt.Sprintf("Broadcast Address: %v", c.broadcastAddress))
+	log.Debug(fmt.Sprintf("Local Address: %s", c.myAddress))
+	log.Debug(fmt.Sprintf("Port: %x", c.port))
 	go c.listen()
 	return c, nil
 }
 
-func (c *Client) LocalAddress() (la bactype.Address, err error) {
-	ip, _, _ := net.ParseCIDR(c.MyAddress)
+func (c *Client) localAddress() (la bactype.Address, err error) {
+	ip, _, _ := net.ParseCIDR(c.myAddress)
 	ad := ip.To4()
 	udp := net.UDPAddr{
 		IP:   ad,
-		Port: c.Port,
+		Port: c.port,
 	}
 	la = bactype.UDPToAddress(&udp)
 	return la, nil
 }
 
-func (c *Client) LocalUDPAddress() (*net.UDPAddr, error) {
-	ip, _, _ := net.ParseCIDR(c.MyAddress)
-	netstr := fmt.Sprintf("%s:%d", ip.String(), c.Port)
+func (c *Client) localUDPAddress() (*net.UDPAddr, error) {
+	ip, _, _ := net.ParseCIDR(c.myAddress)
+	netstr := fmt.Sprintf("%s:%d", ip.String(), c.port)
 	return net.ResolveUDPAddr("udp4", netstr)
 }
