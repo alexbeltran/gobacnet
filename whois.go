@@ -38,6 +38,10 @@ import (
 	"github.com/alexbeltran/gobacnet/types"
 )
 
+// WhoIs finds all devices with ids between the provided low and high values.
+// Use constant ArrayAll for both fields to scan the entire network at once.
+// Using ArrayAll is highly discouraged for most networks since it can lead
+// to a high congested network.
 func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 	dest := types.UDPToAddress(&net.UDPAddr{
 		IP:   c.broadcastAddress,
