@@ -207,7 +207,8 @@ func (e *Encoder) AppData(i interface{}) error {
 	case bool:
 		e.boolean(val)
 	case string:
-		e.tag(tagInfo{ID: tagCharacterString, Context: appLayerContext, Value: uint32(len(val))})
+		// Add 1 to length to account for the encoding byte
+		e.tag(tagInfo{ID: tagCharacterString, Context: appLayerContext, Value: uint32(len(val) + 1)})
 		e.string(val)
 	case uint32:
 		length := valueLength(val)
@@ -263,7 +264,8 @@ func (d *Decoder) AppData() (interface{}, error) {
 
 	case tagCharacterString:
 		var s string
-		err := d.string(&s, len)
+		// Subtract 1 to length to account for the encoding byte
+		err := d.string(&s, len-1)
 		return s, err
 	case tagBitString:
 		return nil, fmt.Errorf("decoding bit strings is currently unsupported")

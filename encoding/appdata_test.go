@@ -75,7 +75,7 @@ func generalSimpleDataTypes(t *testing.T, generic bool) func(t *testing.T) {
 		// Stored as 32
 		var large uint32 = 0xFFFFFFF0
 
-		str := "pizza pizza"
+		str := "my pizza pizza"
 		objID := types.ObjectID{93, 42}
 
 		if generic {
@@ -106,7 +106,7 @@ func generalSimpleDataTypes(t *testing.T, generic bool) func(t *testing.T) {
 			enc.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: size32})
 			enc.unsigned(large)
 
-			enc.tag(tagInfo{ID: tagCharacterString, Context: appLayerContext, Value: uint32(len(str))})
+			enc.tag(tagInfo{ID: tagCharacterString, Context: appLayerContext, Value: uint32(len(str) + 1)})
 			enc.string(str)
 
 			enc.tag(tagInfo{ID: tagObjectID, Context: appLayerContext, Value: objectIDLen})
