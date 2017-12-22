@@ -103,7 +103,7 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 
 		// Tag 0 - Object ID
 		var expectedTag uint8
-		tag, meta, _ := d.tagNumberAndValue()
+		tag, meta, length := d.tagNumberAndValue()
 		objType, instance := d.objectId()
 
 		if tag != expectedTag {
@@ -126,7 +126,7 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 			return &ErrorWrongTagType{OpeningTag}
 		}
 		// Tag 2 - Property Tag
-		tag, meta, length := d.tagNumberAndValue()
+		tag, meta, length = d.tagNumberAndValue()
 
 		for d.len() > 0 && tag == 2 && !meta.isClosing() {
 			expectedTag = 2
@@ -185,7 +185,7 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 				return &ErrorWrongTagType{ClosingTag}
 			}
 
-			tag, meta = d.tagNumber()
+			tag, meta, length = d.tagNumberAndValue()
 			// Tag 5 - (Optional) Error Code
 			expectedTag = 5
 			if tag == expectedTag {
