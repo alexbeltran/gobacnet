@@ -43,8 +43,8 @@ import (
 func (c *Client) address(addr bactype.Address) (net.UDPAddr, error) {
 	if addr.IsBroadcast() {
 		return net.UDPAddr{
-			IP:   c.BroadcastAddress,
-			Port: c.Port,
+			IP:   c.broadcastAddress,
+			Port: c.port,
 		}, nil
 	} else if addr.IsSubBroadcast() {
 		// Network specific
@@ -54,8 +54,8 @@ func (c *Client) address(addr bactype.Address) (net.UDPAddr, error) {
 
 		// Broadcast
 		return net.UDPAddr{
-			IP:   c.BroadcastAddress,
-			Port: c.Port,
+			IP:   c.broadcastAddress,
+			Port: c.port,
 		}, nil
 	} else if addr.IsUnicast() {
 		return addr.UDPAddr()
