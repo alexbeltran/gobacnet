@@ -226,7 +226,7 @@ func TestEnumerated(t *testing.T) {
 func compareReadProperties(t *testing.T, rd bactype.ReadPropertyData, outRd bactype.ReadPropertyData) {
 	// See if the initial read property data matches the output read property
 	if !reflect.DeepEqual(rd, outRd) {
-		t.Errorf("Mismatch between decrypted values. Received %v, expected %v", rd, outRd)
+		t.Errorf("Mismatch between decrypted values.\nReceived %v\nExpected %v", rd, outRd)
 	}
 }
 
