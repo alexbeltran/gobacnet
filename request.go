@@ -41,6 +41,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
+// ReadProperty reads a single property from a single object in the given device.
 func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) (bactype.ReadPropertyData, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
