@@ -294,7 +294,6 @@ func TestReadAckProperty(t *testing.T) {
 	}
 
 	// We add +2 since there needs to be space for the header information
-	rd.Object.Properties[0].DataLen = len(data) + 2
 	subTestReadPropertyAck(t, rd)
 
 	rd.Object.Properties[0].ArrayIndex = 2

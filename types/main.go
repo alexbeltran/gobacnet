@@ -57,7 +57,6 @@ type Property struct {
 	Type       uint32
 	ArrayIndex uint32
 	Data       interface{}
-	DataLen    int
 }
 
 type ReadPropertyData struct {

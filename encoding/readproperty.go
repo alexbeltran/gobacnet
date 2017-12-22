@@ -173,7 +173,6 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 		if openTag == 3 {
 			var err error
 			// We subtract one to ignore the closing tag.
-			prop.DataLen = d.buff.Len() - 1
 			datalist := make([]interface{}, 0)
 
 			// There is a closing tag of size 1 byte that we ignore which is why we are
