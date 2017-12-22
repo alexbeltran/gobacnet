@@ -155,7 +155,7 @@ func (c *Client) listen() error {
 			i   int
 		)
 
-		b := make([]byte, 1024)
+		b := make([]byte, 2048)
 		i, adr, err = c.listener.ReadFromUDP(b)
 		if err != nil {
 			c.log.Error(err)
