@@ -97,12 +97,20 @@ func IsOddDayOfMonth(day int) bool {
 	return day == 32
 }
 func (e *Encoder) string(s string) {
+	e.write(stringUTF8)
 	e.write([]byte(s))
 }
-func (d *Decoder) string(s *string, len int) {
+func (d *Decoder) string(s *string, len int) error {
+	var t stringType
+	d.decode(&t)
+	if t != stringUTF8 {
+		return fmt.Errorf("unsupported string format %d", t)
+	}
+
 	b := make([]byte, len)
 	d.decode(b)
 	*s = string(b)
+	return d.Error()
 }
 func (e *Encoder) octetstring(b []byte) {
 	e.write([]byte(b))
@@ -255,9 +263,8 @@ func (d *Decoder) AppData() (interface{}, error) {
 
 	case tagCharacterString:
 		var s string
-		d.string(&s, len)
-		return s, d.Error()
-
+		err := d.string(&s, len)
+		return s, err
 	case tagBitString:
 		return nil, fmt.Errorf("decoding bit strings is currently unsupported")
 	case tagEnumerated:
