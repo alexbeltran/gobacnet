@@ -245,7 +245,7 @@ func TestReadMultiple(t *testing.T) {
 	rp := bactype.ReadMultipleProperty{}
 	err := dec.ReadMultiplePropertyAck(&rp)
 	if err != nil {
-		log.Fatal(err)
+		t.Fatal(err)
 	}
 
 	counter := 0
