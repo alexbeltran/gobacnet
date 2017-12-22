@@ -179,3 +179,21 @@ func TestPropertyList(t *testing.T) {
 	}
 
 }
+
+// Testing for bug where a unicode is sometimes appending to the front of the string returned.
+func TestStringUnicode(t *testing.T) {
+	s := "there is there such thing as too much pizza?"
+	enc := NewEncoder()
+	enc.AppData(s)
+
+	dec := NewDecoder(enc.Bytes())
+	out, err := dec.AppData()
+	if err != nil {
+		t.Errorf("decoding string failed: %v", err)
+	}
+
+	outStr := out.(string)
+	if outStr[0] != s[0] {
+		t.Fatal("an unknown code was prepending to output")
+	}
+}
