@@ -51,11 +51,11 @@ const maxReattempt = 2
 func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
 	var out bactype.ReadMultipleProperty
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	id, err := c.tsm.ID(ctx)
 	if err != nil {
-		return out, err
+		return out, fmt.Errorf("unable to get transaction id: %v", err)
 	}
 	defer c.tsm.Put(id)
 
@@ -116,6 +116,7 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 		dec.APDU(&apdu)
 		err = dec.ReadMultiplePropertyAck(&out)
 		if err != nil {
+			c.log.Debugf("WEIRD PACKET: %v: %v", err, b)
 			return out, err
 		}
 		return out, err
