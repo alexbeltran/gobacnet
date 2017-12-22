@@ -67,6 +67,8 @@ func getBroadcast(addr string) (net.IP, error) {
 	return broadcast, nil
 }
 
+// NewClient creates a new client with the given interface and
+// port.
 func NewClient(inter string, port int) (*Client, error) {
 	c := &Client{}
 	i, err := net.InterfaceByName(inter)
