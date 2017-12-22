@@ -34,12 +34,13 @@ package gobacnet
 import (
 	"fmt"
 	"net"
+	"os"
 	"time"
 
 	"github.com/alexbeltran/gobacnet/tsm"
 	bactype "github.com/alexbeltran/gobacnet/types"
 	"github.com/alexbeltran/gobacnet/utsm"
-	log "github.com/sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 )
 
 const defaultStateSize = 20
@@ -52,6 +53,7 @@ type Client struct {
 	tsm              *tsm.TSM
 	utsm             *utsm.Manager
 	listener         *net.UDPConn
+	log              *logrus.Logger
 }
 
 // getBroadcast uses the given address with subnet to return the broadcast address
@@ -126,12 +128,21 @@ func NewClient(inter string, port int) (*Client, error) {
 	}
 
 	c.listener = conn
-	log.SetLevel(log.ErrorLevel)
+	c.log = logrus.New()
+	c.log.Formatter = &logrus.TextFormatter{}
+	c.log.SetLevel(logrus.DebugLevel)
+
+	// open a debug file
+	f, err := os.Create("gobacnet.log")
+	if err != nil {
+		return c, fmt.Errorf("Could not create a log file")
+	}
+	c.log.Out = f
 
 	// Print out relevant information
-	log.Debug(fmt.Sprintf("Broadcast Address: %v", c.broadcastAddress))
-	log.Debug(fmt.Sprintf("Local Address: %s", c.myAddress))
-	log.Debug(fmt.Sprintf("Port: %x", c.port))
+	c.log.Debug(fmt.Sprintf("Broadcast Address: %v", c.broadcastAddress))
+	c.log.Debug(fmt.Sprintf("Local Address: %s", c.myAddress))
+	c.log.Debug(fmt.Sprintf("Port: %x", c.port))
 	go c.listen()
 	return c, nil
 }
