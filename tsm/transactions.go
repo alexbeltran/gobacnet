@@ -70,9 +70,10 @@ type TSM struct {
 func New(size int) *TSM {
 	t := &TSM{
 		states: make(map[int]*state), pool: sync.Pool{
+			// Operation doesn't include a new channel. We want that done when a get is
+			// done since we close all channels when putting into the pool.
 			New: func() interface{} {
 				s := new(state)
-				s.data = make(chan interface{})
 				return s
 			},
 		},
@@ -150,6 +151,7 @@ func (t *TSM) ID(ctx context.Context) (int, error) {
 	s := t.pool.Get().(*state)
 	s.state = idle
 	s.requestTimer = 0 // TODO: apdu_timeout
+	s.data = make(chan interface{})
 	t.states[id] = s
 	return id, nil
 }
@@ -163,6 +165,8 @@ func (t *TSM) Put(id int) error {
 	if !ok {
 		return fmt.Errorf("id %d does not exist in the transactions", id)
 	}
+
+	close(s.data)
 	t.pool.Put(s)
 	t.free.id <- id
 	t.free.space <- struct{}{}
