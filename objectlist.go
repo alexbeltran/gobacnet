@@ -152,7 +152,7 @@ func (c *Client) objectInformation(dev *bactype.Device) error {
 	}
 	resp, err := c.ReadMultiProperty(*dev, rpm)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to read multiple property: %v", err)
 	}
 	var name, description string
 	var ok bool
@@ -182,8 +182,11 @@ func (c *Client) objectInformation(dev *bactype.Device) error {
 func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
 	err := c.objectList(&dev)
 	if err != nil {
-		return dev, nil
+		return dev, fmt.Errorf("unable to get object list: %v", err)
 	}
 	err = c.objectInformation(&dev)
-	return dev, err
+	if err != nil {
+		return dev, fmt.Errorf("unable to get object's information: %v", err)
+	}
+	return dev, nil
 }
