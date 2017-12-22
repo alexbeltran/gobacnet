@@ -41,7 +41,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-//Close closes all inbound connections
+// Close free resources for the client. Always call this function when using NewClient
 func (c *Client) Close() {
 	if c.listener == nil {
 		return

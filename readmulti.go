@@ -42,6 +42,12 @@ import (
 
 const maxReattempt = 2
 
+// ReadMultipleProperty uses the given device and read property request to read
+// from a device. Along with being able to read multiple properties from a
+// device, it can also read these properties from multiple objects. This is a
+// good feature to read all present values of every object in the device. This
+// is a batch operation compared to a ReadProperty and should be used in place
+// when reading more than two objects/properties.
 func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
 	var out bactype.ReadMultipleProperty
 
@@ -53,7 +59,7 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 	}
 	defer c.tsm.Put(id)
 
-	udp, err := c.LocalUDPAddress()
+	udp, err := c.localUDPAddress()
 	if err != nil {
 		return out, err
 	}
@@ -84,7 +90,7 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 	count := 0
 	for ; err != nil && count < maxReattempt; count++ {
 		var b []byte
-		_, err = c.Send(dev.Addr, pack)
+		_, err = c.send(dev.Addr, pack)
 		if err != nil {
 			continue
 		}
