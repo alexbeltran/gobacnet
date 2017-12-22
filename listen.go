@@ -33,6 +33,7 @@ package gobacnet
 
 import (
 	"fmt"
+	"io"
 	"net"
 
 	log "github.com/sirupsen/logrus"
@@ -144,11 +145,19 @@ func (c *Client) handleMsg(src *net.UDPAddr, b []byte) {
 
 }
 
-// Receive
+// listen for incoming bacnet packets.
 func (c *Client) listen() error {
-	for c.listener != nil {
+	var err error
+
+	// While connection is opened
+	for err != io.EOF {
+		var (
+			adr *net.UDPAddr
+			i   int
+		)
+
 		b := make([]byte, 1024)
-		i, adr, err := c.listener.ReadFromUDP(b)
+		i, adr, err = c.listener.ReadFromUDP(b)
 		if err != nil {
 			log.Println(err)
 			continue
