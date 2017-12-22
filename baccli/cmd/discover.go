@@ -100,8 +100,14 @@ func discover(cmd *cobra.Command, args []string) {
 
 	// combine results
 	var results []types.Device
+	repeats := make(map[types.ObjectInstance]struct{})
 	go func() {
 		for dev := range merge {
+			if _, ok := repeats[dev.ID.Instance]; ok {
+				log.Debug("Receive repeated device %d", dev.ID.Instance)
+				continue
+			}
+			repeats[dev.ID.Instance] = struct{}{}
 			results = append(results, dev)
 		}
 	}()
@@ -109,9 +115,16 @@ func discover(cmd *cobra.Command, args []string) {
 	// Initiates who is
 	var startRange, endRange, i int
 	incr := int(scanSize)
+
+	min := func(a, b int) int {
+		if a < b {
+			return a
+		}
+		return b
+	}
 	for i = 0; i < types.MaxInstance/int(scanSize); i++ {
 		startRange = i * incr
-		endRange = (i+1)*incr - 1
+		endRange = min((i+1)*incr-1, types.MaxInstance)
 		log.Infof("Scanning %d to %d", startRange, endRange)
 		scanned, err := c.WhoIs(startRange, endRange)
 		if err != nil {
@@ -129,7 +142,7 @@ func discover(cmd *cobra.Command, args []string) {
 		log.Errorf("unable to save document: %v", err)
 	}
 	delta := time.Now().Sub(start)
-	log.Info("Discovery completed in %s", delta)
+	log.Infof("Discovery completed in %s", delta)
 	if !printStdout {
 		log.Infof("Results saved in %s", output)
 	}
