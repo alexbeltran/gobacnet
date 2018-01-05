@@ -83,11 +83,11 @@ func discover(cmd *cobra.Command, args []string) {
 		go func() {
 			for devs := range scan {
 				for _, d := range devs {
+					log.Infof("Found device: %d", d.ID.Instance)
 					dev, err := c.Objects(d)
-					log.Printf("Found device: %d", d.ID)
 
 					if err != nil {
-						log.Print(err)
+						log.Error(err)
 						continue
 					}
 					merge <- dev
@@ -101,13 +101,20 @@ func discover(cmd *cobra.Command, args []string) {
 	// combine results
 	var results []types.Device
 	repeats := make(map[types.ObjectInstance]struct{})
+	counter := 0
+	total := 0
 	go func() {
 		for dev := range merge {
 			if _, ok := repeats[dev.ID.Instance]; ok {
-				log.Debug("Receive repeated device %d", dev.ID.Instance)
+				log.Errorf("Receive repeated device %d", dev.ID.Instance)
 				continue
 			}
+			log.Infof("Merged: %d", dev.ID.Instance)
 			repeats[dev.ID.Instance] = struct{}{}
+			if len(dev.Objects) > 0 {
+				counter++
+			}
+			total++
 			results = append(results, dev)
 		}
 	}()
@@ -146,6 +153,7 @@ func discover(cmd *cobra.Command, args []string) {
 	if !printStdout {
 		log.Infof("Results saved in %s", output)
 	}
+	log.Infof("%d/%d has values", counter, total)
 }
 
 func init() {
