@@ -82,44 +82,50 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 
 	pack := enc.Bytes()
 	if dev.MaxApdu < uint32(len(pack)) {
-		return out, fmt.Errorf("read multiple property is too large")
+		return out, fmt.Errorf("read multiple property is too large (max: %d given: %d)", dev.MaxApdu, len(pack))
 	}
 	// the value filled doesn't matter. it just needs to be non nil
 	err = fmt.Errorf("go")
 
-	count := 0
-	for ; err != nil && count < maxReattempt; count++ {
-		var b []byte
-		_, err = c.send(dev.Addr, pack)
-		if err != nil {
-			continue
+	for count := 0; err != nil && count < maxReattempt; count++ {
+		out, err = c.sendReadMultipleProperty(id, dev, pack)
+		if err == nil {
+			return out, nil
 		}
+	}
+	return out, fmt.Errorf("failed %d tries: %v", maxReattempt, err)
+}
 
-		raw, err := c.tsm.Receive(id, time.Duration(5)*time.Second)
-		if err != nil {
-			err = fmt.Errorf("unable to receive id %d: %v", id, err)
-			continue
-		}
-
-		switch v := raw.(type) {
-		case error:
-			return out, err
-		case []byte:
-			b = v
-		default:
-			return out, fmt.Errorf("received unknown datatype %T", raw)
-		}
-
-		dec := encoding.NewDecoder(b)
-
-		var apdu bactype.APDU
-		dec.APDU(&apdu)
-		err = dec.ReadMultiplePropertyAck(&out)
-		if err != nil {
-			c.log.Debugf("WEIRD PACKET: %v: %v", err, b)
-			return out, err
-		}
+func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, request []byte) (bactype.ReadMultipleProperty, error) {
+	var out bactype.ReadMultipleProperty
+	_, err := c.send(dev.Addr, request)
+	if err != nil {
 		return out, err
 	}
-	return out, fmt.Errorf("failed %d tries: %v", count, err)
+
+	raw, err := c.tsm.Receive(id, time.Duration(5)*time.Second)
+	if err != nil {
+		return out, fmt.Errorf("unable to receive id %d: %v", id, err)
+	}
+
+	var b []byte
+	switch v := raw.(type) {
+	case error:
+		return out, err
+	case []byte:
+		b = v
+	default:
+		return out, fmt.Errorf("received unknown datatype %T", raw)
+	}
+
+	dec := encoding.NewDecoder(b)
+
+	var apdu bactype.APDU
+	dec.APDU(&apdu)
+	err = dec.ReadMultiplePropertyAck(&out)
+	if err != nil {
+		c.log.Debugf("WEIRD PACKET: %v: %v", err, b)
+		return out, err
+	}
+	return out, err
 }
