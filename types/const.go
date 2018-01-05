@@ -32,7 +32,7 @@ License.
 package types
 
 const (
-	MaxInstance = 0xFFFF
+	MaxInstance = 0x3FFFFF
 )
 
 const (

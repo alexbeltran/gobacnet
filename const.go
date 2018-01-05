@@ -47,3 +47,4 @@ const defautlMaxInfoFrames = 1
 // ArrayAll is used when reading/writting to a property to read/write the entire
 // array
 const ArrayAll = 0xFFFFFFFF
+const maxStandardBacnetType = 128

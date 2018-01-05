@@ -47,7 +47,7 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 	defer cancel()
 	id, err := c.tsm.ID(ctx)
 	if err != nil {
-		return bactype.ReadPropertyData{}, err
+		return bactype.ReadPropertyData{}, fmt.Errorf("unable to get an transaction id: %v", err)
 	}
 	defer c.tsm.Put(id)
 

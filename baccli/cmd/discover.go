@@ -83,11 +83,11 @@ func discover(cmd *cobra.Command, args []string) {
 		go func() {
 			for devs := range scan {
 				for _, d := range devs {
+					log.Infof("Found device: %d", d.ID.Instance)
 					dev, err := c.Objects(d)
-					log.Printf("Found device: %d", d.ID)
 
 					if err != nil {
-						log.Print(err)
+						log.Error(err)
 						continue
 					}
 					merge <- dev
@@ -100,8 +100,21 @@ func discover(cmd *cobra.Command, args []string) {
 
 	// combine results
 	var results []types.Device
+	repeats := make(map[types.ObjectInstance]struct{})
+	counter := 0
+	total := 0
 	go func() {
 		for dev := range merge {
+			if _, ok := repeats[dev.ID.Instance]; ok {
+				log.Errorf("Receive repeated device %d", dev.ID.Instance)
+				continue
+			}
+			log.Infof("Merged: %d", dev.ID.Instance)
+			repeats[dev.ID.Instance] = struct{}{}
+			if len(dev.Objects) > 0 {
+				counter++
+			}
+			total++
 			results = append(results, dev)
 		}
 	}()
@@ -109,9 +122,16 @@ func discover(cmd *cobra.Command, args []string) {
 	// Initiates who is
 	var startRange, endRange, i int
 	incr := int(scanSize)
+
+	min := func(a, b int) int {
+		if a < b {
+			return a
+		}
+		return b
+	}
 	for i = 0; i < types.MaxInstance/int(scanSize); i++ {
 		startRange = i * incr
-		endRange = (i+1)*incr - 1
+		endRange = min((i+1)*incr-1, types.MaxInstance)
 		log.Infof("Scanning %d to %d", startRange, endRange)
 		scanned, err := c.WhoIs(startRange, endRange)
 		if err != nil {
@@ -129,10 +149,11 @@ func discover(cmd *cobra.Command, args []string) {
 		log.Errorf("unable to save document: %v", err)
 	}
 	delta := time.Now().Sub(start)
-	log.Info("Discovery completed in %s", delta)
+	log.Infof("Discovery completed in %s", delta)
 	if !printStdout {
 		log.Infof("Results saved in %s", output)
 	}
+	log.Infof("%d/%d has values", counter, total)
 }
 
 func init() {

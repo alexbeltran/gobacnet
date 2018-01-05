@@ -11,6 +11,8 @@ script:
   - go test ./tsm
   - go test ./types
   - go test ./utsm
+# Make sure everything can build
+  - go build -o ./baccli/bacccli ./baccli
 # Run Test that require a test server
   - docker pull ucmercedandeslab/bacnet-server
   - docker run -it --rm -d ucmercedandeslab/bacnet-server

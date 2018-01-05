@@ -53,7 +53,7 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 	}
 	resp, err := c.ReadMultiProperty(dev, rpm)
 	if err != nil {
-		return nil, fmt.Errorf("unable to read multiple property: %v", err)
+		return nil, fmt.Errorf("unable to read multiple properties: %v", err)
 	}
 	if len(resp.Objects) == 0 {
 		return nil, fmt.Errorf("no data was returned")
@@ -72,7 +72,7 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 	return objs, nil
 }
 
-const readPropRequestSize = 16
+const readPropRequestSize = 20
 
 func objectCopy(dest bactype.ObjectMap, src []bactype.Object) {
 	for _, o := range src {
@@ -117,42 +117,40 @@ func (c *Client) objectList(dev *bactype.Device) error {
 	return nil
 }
 
-func (c *Client) objectInformation(dev *bactype.Device) error {
-	rpm := bactype.ReadMultipleProperty{
-		Objects: []bactype.Object{}}
-
+func (c *Client) objectInformation(dev *bactype.Device, objs []bactype.Object) error {
 	// Often times the map will re arrange the order it spits out
 	// so we need to keep track since the response will be in the
 	// same order we issue the commands.
-	keys := make([]bactype.ObjectID, dev.Objects.Len())
+	keys := make([]bactype.ObjectID, len(objs))
 	counter := 0
-	for t, m := range dev.Objects {
-		for i, o := range m {
-			keys[counter] = bactype.ObjectID{
-				Instance: i,
-				Type:     t,
-			}
+	rpm := bactype.ReadMultipleProperty{
+		Objects: []bactype.Object{},
+	}
 
-			counter++
-			rpm.Objects = append(rpm.Objects, bactype.Object{
-				ID: o.ID,
-				Properties: []bactype.Property{
-					bactype.Property{
-						Type:       property.ObjectName,
-						ArrayIndex: bactype.ArrayAll,
-					},
-					bactype.Property{
-						Type:       property.Description,
-						ArrayIndex: bactype.ArrayAll,
-					},
-				},
-			})
-
+	for _, o := range objs {
+		if o.ID.Type > maxStandardBacnetType {
+			continue
 		}
+		keys[counter] = o.ID
+		counter++
+		rpm.Objects = append(rpm.Objects, bactype.Object{
+			ID: o.ID,
+			Properties: []bactype.Property{
+				bactype.Property{
+					Type:       property.ObjectName,
+					ArrayIndex: bactype.ArrayAll,
+				},
+				bactype.Property{
+					Type:       property.Description,
+					ArrayIndex: bactype.ArrayAll,
+				},
+			},
+		})
+
 	}
 	resp, err := c.ReadMultiProperty(*dev, rpm)
 	if err != nil {
-		return err
+		return fmt.Errorf("unable to read multiple property :%v", err)
 	}
 	var name, description string
 	var ok bool
@@ -170,6 +168,21 @@ func (c *Client) objectInformation(dev *bactype.Device) error {
 		obj.Description = description
 		dev.Objects[keys[i].Type][keys[i].Instance] = obj
 	}
+	return nil
+}
+
+func (c *Client) allObjectInformation(dev *bactype.Device) error {
+	objs := dev.ObjectSlice()
+	incrSize := 5
+
+	var err error
+	for i := 0; i < len(objs); i += incrSize {
+		subset := objs[i:min(i+incrSize, len(objs))]
+		err = c.objectInformation(dev, subset)
+		if err != nil {
+			return err
+		}
+	}
 
 	return nil
 }
@@ -182,8 +195,11 @@ func (c *Client) objectInformation(dev *bactype.Device) error {
 func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
 	err := c.objectList(&dev)
 	if err != nil {
-		return dev, nil
+		return dev, fmt.Errorf("unable to get object list: %v", err)
 	}
-	err = c.objectInformation(&dev)
-	return dev, err
+	err = c.allObjectInformation(&dev)
+	if err != nil {
+		return dev, fmt.Errorf("unable to get object's information: %v", err)
+	}
+	return dev, nil
 }

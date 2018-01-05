@@ -19,9 +19,11 @@ const (
 	BinaryValue       ObjectType = 5
 	DeviceType        ObjectType = 8
 	File              ObjectType = 10
+	MultiStateInput   ObjectType = 13
 	NotificationClass ObjectType = 15
 	MultiStateValue   ObjectType = 19
 	TrendLog          ObjectType = 20
+	CharacterString   ObjectType = 40
 )
 
 const (
@@ -35,7 +37,9 @@ const (
 	FileStr              = "File"
 	NotificationClassStr = "Notification Class"
 	MultiStateValueStr   = "Multi-State Value"
+	MultiStateInputStr   = "Multi-State Input"
 	TrendLogStr          = "Trend Log"
+	CharacterStringStr   = "Character String"
 )
 
 var objTypeMap = map[ObjectType]string{
@@ -49,7 +53,9 @@ var objTypeMap = map[ObjectType]string{
 	File:              FileStr,
 	NotificationClass: NotificationClassStr,
 	MultiStateValue:   MultiStateValueStr,
+	MultiStateInput:   MultiStateInputStr,
 	TrendLog:          TrendLogStr,
+	CharacterString:   CharacterStringStr,
 }
 
 var objStrTypeMap = map[string]ObjectType{
@@ -64,6 +70,7 @@ var objStrTypeMap = map[string]ObjectType{
 	NotificationClassStr: NotificationClass,
 	MultiStateValueStr:   MultiStateValue,
 	TrendLogStr:          TrendLog,
+	CharacterStringStr:   CharacterString,
 }
 
 func GetType(s string) ObjectType {
@@ -97,6 +104,7 @@ func (rp ReadMultipleProperty) String() string {
 		for _, prop := range obj.Properties {
 			buff.WriteString(spacing)
 			buff.WriteString(property.String(prop.Type))
+			buff.WriteString(fmt.Sprintf("[%v]", prop.ArrayIndex))
 			buff.WriteString(": ")
 			buff.WriteString(fmt.Sprintf("%v", prop.Data))
 			buff.WriteString("\n")
