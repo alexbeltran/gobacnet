@@ -212,3 +212,14 @@ func (om ObjectMap) UnmarshalJSON(data []byte) error {
 	}
 	return nil
 }
+
+// ObjectSlice returns all the objects in the device as a slice (not thread-safe)
+func (dev Device) ObjectSlice() []Object {
+	objs := []Object{}
+	for _, objMap := range dev.Objects {
+		for _, o := range objMap {
+			objs = append(objs, o)
+		}
+	}
+	return objs
+}
