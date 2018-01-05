@@ -9,3 +9,17 @@ const (
 	maxInt = int(maxUint >> 1)
 	minInt = -maxInt - 1
 )
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
