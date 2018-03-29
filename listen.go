@@ -113,6 +113,7 @@ func (c *Client) handleMsg(src *net.UDPAddr, b []byte) {
 				c.log.Errorf("Unconfirmed: %d %v", apdu.UnconfirmedService, apdu.RawData)
 			}
 		case bactype.SimpleAck:
+			c.log.Debug("Received Simple Ack")
 			err := c.tsm.Send(int(apdu.InvokeId), send)
 			if err != nil {
 				return
