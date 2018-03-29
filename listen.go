@@ -33,6 +33,7 @@ package gobacnet
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"os"
 
@@ -67,12 +68,14 @@ func (c *Client) handleMsg(src *net.UDPAddr, b []byte) {
 		// Remove the header information
 		b = b[mtuHeaderLength:]
 		err = dec.NPDU(&npdu)
+		log.Println(npdu)
 		if err != nil {
 			return
 		}
 
 		if npdu.IsNetworkLayerMessage {
 			c.log.Debug("Ignored Network Layer Message")
+			log.Println("Ignore nlm")
 			return
 		}
 
@@ -81,8 +84,12 @@ func (c *Client) handleMsg(src *net.UDPAddr, b []byte) {
 		send := dec.Bytes()
 		err = dec.APDU(&apdu)
 		if err != nil {
+			log.Printf("Issue decoding APDU: %v", err)
 			return
 		}
+		log.Println(apdu.InvokeId)
+		log.Println(apdu.DataType)
+		log.Println(apdu)
 		switch apdu.DataType {
 		case bactype.UnconfirmedServiceRequest:
 			if apdu.UnconfirmedService == bactype.ServiceUnconfirmedIAm {
@@ -109,6 +116,11 @@ func (c *Client) handleMsg(src *net.UDPAddr, b []byte) {
 				//log.WithFields(log.Fields{"low": low, "high": high}).Debug("WHO IS Request")
 			} else {
 				c.log.Errorf("Unconfirmed: %d %v", apdu.UnconfirmedService, apdu.RawData)
+			}
+		case bactype.SimpleAck:
+			err := c.tsm.Send(int(apdu.InvokeId), send)
+			if err != nil {
+				return
 			}
 		case bactype.ComplexAck:
 			c.log.Debug("Received Complex Ack")

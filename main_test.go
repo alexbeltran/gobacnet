@@ -104,6 +104,10 @@ func TestServices(t *testing.T) {
 		testWhoIs(c, t)
 	})
 
+	t.Run("WriteProperty", func(t *testing.T) {
+		testWritePropertyService(c, t)
+	})
+
 }
 
 func testReadPropertyService(c *Client, t *testing.T) {
@@ -140,5 +144,75 @@ func testWhoIs(c *Client, t *testing.T) {
 	}
 	if len(dev) == 0 {
 		t.Fatalf("Unable to find device id %d", testServer)
+	}
+}
+
+// This test will first cconver the name of an analogue sensor to a different
+// value, read the property to make sure the name was changed, revert back, and
+// ensure that the revert was successful
+func testWritePropertyService(c *Client, t *testing.T) {
+	const targetName = "Hotdog"
+	dev, err := c.WhoIs(testServer, testServer)
+	wp := types.ReadPropertyData{
+		Object: types.Object{
+			ID: types.ObjectID{
+				Type:     types.AnalogValue,
+				Instance: 1,
+			},
+			Properties: []types.Property{
+				types.Property{
+					Type:       property.ObjectName, // Present value
+					ArrayIndex: ArrayAll,
+				},
+			},
+		},
+	}
+
+	if len(dev) == 0 {
+		t.Fatalf("Unable to find device id %d", testServer)
+	}
+	resp, err := c.ReadProperty(dev[0], wp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Store the original response since we plan to put it back in after
+	org := resp.Object.Properties[0].Data
+	t.Logf("original name is: %d", org)
+
+	wp.Object.Properties[0].Data = targetName
+	err = c.WriteProperty(dev[0], wp, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = c.ReadProperty(dev[0], wp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := resp.Object.Properties[0].Data
+	s, ok := d.(string)
+	if !ok {
+		log.Fatalf("unexpected return type %T", d)
+	}
+
+	if s != targetName {
+		log.Fatalf("write to name %s did not successed, name was %s", targetName, s)
+	}
+
+	// Revert Changes
+	wp.Object.Properties[0].Data = org
+	err = c.WriteProperty(dev[0], wp, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = c.ReadProperty(dev[0], wp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Object.Properties[0].Data != org {
+		t.Fatalf("unable to revert name back to original value %v: name is %v", org, resp.Object.Properties[0].Data)
 	}
 }
