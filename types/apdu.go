@@ -133,6 +133,7 @@ type PDUType uint8
 const (
 	ConfirmedServiceRequest   PDUType = 0
 	UnconfirmedServiceRequest PDUType = 0x10
+	SimpleAck                 PDUType = 0x20
 	ComplexAck                PDUType = 0x30
 	SegmentAck                PDUType = 0x40
 	Error                     PDUType = 0x50
