@@ -3,7 +3,6 @@ package gobacnet
 import (
 	"context"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/alexbeltran/gobacnet/encoding"
@@ -17,7 +16,6 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.ReadPropertyData,
 	if err != nil {
 		return fmt.Errorf("unable to get an transaction id: %v", err)
 	}
-	log.Printf("Write request %d", id)
 	defer c.tsm.Put(id)
 
 	udp, err := c.localUDPAddress()
@@ -49,13 +47,11 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.ReadPropertyData,
 		var raw interface{}
 		_, err = c.send(dest.Addr, enc.Bytes())
 		if err != nil {
-			log.Print(err)
 			continue
 		}
 
 		raw, err = c.tsm.Receive(id, time.Duration(5)*time.Second)
 		if err != nil {
-			log.Println(err)
 			continue
 		}
 		switch v := raw.(type) {
@@ -72,7 +68,6 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.ReadPropertyData,
 		var apdu bactype.APDU
 		dec.APDU(&apdu)
 		if err = dec.Error(); err != nil {
-			log.Println(err)
 			continue
 		}
 		return err
