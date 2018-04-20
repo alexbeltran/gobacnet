@@ -102,10 +102,8 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 		var apdu bactype.APDU
 		dec.APDU(&apdu)
 		dec.ReadProperty(&out)
-		if err = dec.Error(); err != nil {
-			continue
-		}
-		return out, err
+
+		return out, dec.Error()
 	}
 	return bactype.ReadPropertyData{}, err
 }
