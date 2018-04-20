@@ -40,7 +40,11 @@ to quickly create a Cobra application.`,
 }
 
 // Flags
-var targetValue string
+var (
+	targetValue string
+	priority    uint
+	isNull      bool
+)
 
 func init() {
 	// Descriptions are kept separate for legibility purposes.
@@ -61,10 +65,13 @@ func init() {
 	writepropCmd.Flags().StringVarP(&targetValue, "value", "v",
 		"", "value that will be set")
 
+	writepropCmd.Flags().UintVar(&priority, "priority", 0, "default is the lowest priority")
 	writepropCmd.Flags().Uint32Var(&arrayIndex, "index", gobacnet.ArrayAll, "Which position to return.")
 	writepropCmd.PersistentFlags().BoolVarP(&listProperties, "list", "l", false,
 		listPropertiesDescr)
 
+	writepropCmd.PersistentFlags().BoolVar(&isNull, "null", false,
+		"clear value by writting null to it.")
 }
 
 func writeProp(cmd *cobra.Command, args []string) {
@@ -121,43 +128,51 @@ func writeProp(cmd *cobra.Command, args []string) {
 			},
 		},
 	}
-	out, err := c.ReadProperty(dest, rp)
-	if err != nil {
-		if rp.Object.Properties[0].Type == property.ObjectList {
-			log.Error("Note: ObjectList reads may need to be broken up into multiple reads due to length. Read index 0 for array length")
-		}
-		log.Fatal(err)
-	}
-	if len(out.Object.Properties) == 0 {
-		fmt.Println("No value returned")
-		return
-	}
-	data := out.Object.Properties[0].Data
-	log.Infof("Current name %v, type %T", out.Object.Properties[0].Data, out.Object.Properties[0].Data)
-
-	if targetValue == "" {
-		log.Fatal("nothing was written")
-		return
-	}
 
 	var wp interface{}
-	switch data.(type) {
-	case float32:
-		var f float64
-		f, err = strconv.ParseFloat(targetValue, 32)
-		wp = float32(f)
-	case float64:
-		wp, err = strconv.ParseFloat(targetValue, 32)
-	case string:
-		wp = targetValue
-	default:
-		err = fmt.Errorf("unable to handle a type %T", data)
-	}
-	if err != nil {
-		log.Printf("Expects a %T", rp.Object.Properties[0].Data)
+	if isNull {
+		wp = types.Null{}
+	} else {
+		out, err := c.ReadProperty(dest, rp)
+
+		if err != nil {
+			if rp.Object.Properties[0].Type == property.ObjectList {
+				log.Error("Note: ObjectList reads may need to be broken up into multiple reads due to length. Read index 0 for array length")
+			}
+			log.Fatal(err)
+		}
+		if len(out.Object.Properties) == 0 {
+			fmt.Println("No value returned")
+			return
+		}
+
+		rd := out.Object.Properties[0].Data
+		log.Infof("Current value %v, type %T", rd, rd)
+
+		if targetValue == "" {
+			log.Fatal("nothing was written")
+			return
+		}
+
+		switch rd.(type) {
+		case float32:
+			var f float64
+			f, err = strconv.ParseFloat(targetValue, 32)
+			wp = float32(f)
+		case float64:
+			wp, err = strconv.ParseFloat(targetValue, 64)
+		case string:
+			wp = targetValue
+		default:
+			err = fmt.Errorf("unable to handle a type %T", rd)
+		}
+		if err != nil {
+			log.Printf("Expects a %T", rp.Object.Properties[0].Data)
+		}
 	}
 	rp.Object.Properties[0].Data = wp
-	err = c.WriteProperty(dest, rp, 0)
+	log.Printf("Writting: %v", wp)
+	err = c.WriteProperty(dest, rp, priority)
 	if err != nil {
 		log.Println(err)
 	}
