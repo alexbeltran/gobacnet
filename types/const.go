@@ -41,3 +41,7 @@ const (
 	WhoIsAll = -1
 	ArrayAll = 0xFFFFFFFF
 )
+
+const (
+	OID_ANY uint32 = 0x023fffff
+)

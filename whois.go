@@ -47,9 +47,29 @@ func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 		IP:   c.broadcastAddress,
 		Port: DefaultPort,
 	})
-	src, _ := c.localAddress()
-
 	dest.SetBroadcast(true)
+
+	return c.internalWhoIs(dest, low, high)
+}
+
+// WhoIsDirected sends an unbounded WhoIs to a single IP address.
+func (c *Client) WhoIsDirected(addr net.IP, port int) ([]types.Device, error) {
+	if port == 0 {
+		port = DefaultPort
+	}
+
+	dest := types.UDPToAddress(&net.UDPAddr{
+		IP:   addr,
+		Port: port,
+	})
+	dest.SetBroadcast(false)
+
+	// Unbounded whois, to a single IP
+	return c.internalWhoIs(dest, ArrayAll, ArrayAll)
+}
+
+func (c *Client) internalWhoIs(dest types.Address, low, high int) ([]types.Device, error) {
+	src, _ := c.localAddress()
 
 	enc := encoding.NewEncoder()
 	npdu := types.NPDU{

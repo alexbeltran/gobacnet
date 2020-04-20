@@ -2,18 +2,26 @@ package property
 
 import "fmt"
 
+type PropertyID byte
+
 const (
-	Description      uint32 = 28
-	FileSize         uint32 = 42
-	FileType         uint32 = 43
-	ModelName        uint32 = 70
-	ObjectIdentifier uint32 = 75
-	ObjectList       uint32 = 76
-	ObjectName       uint32 = 77
-	ObjectReference  uint32 = 78
-	ObjectType       uint32 = 79
-	PresentValue     uint32 = 85
-	Units            uint32 = 117
+	ApplicationSoftwareRevision uint32 = 12
+	Description                 uint32 = 28
+	FileSize                    uint32 = 42
+	FileType                    uint32 = 43
+	FirmwareRevision            uint32 = 44
+	Location                    uint32 = 58
+	ModelName                   uint32 = 70
+	ObjectIdentifier            uint32 = 75
+	ObjectList                  uint32 = 76
+	ObjectName                  uint32 = 77
+	ObjectReference             uint32 = 78
+	ObjectType                  uint32 = 79
+	PresentValue                uint32 = 85
+	PriorityArray               uint32 = 87
+	Units                       uint32 = 117
+	VendorNumber                uint32 = 120
+	VendorName                  uint32 = 121
 )
 
 const (
@@ -23,31 +31,44 @@ const (
 
 // enumMapping should be treated as read only.
 var enumMapping = map[string]uint32{
-	DescriptionStr:     Description,
-	"FileSize":         FileSize,
-	"FileType":         FileType,
-	"ModelName":        ModelName,
-	"ObjectIdentifier": ObjectIdentifier,
-	"ObjectList":       ObjectList,
-	ObjectNameStr:      ObjectName,
-	"ObjectReference":  ObjectReference,
-	"ObjectType":       ObjectType,
-	"PresentValue":     PresentValue,
-	"Units":            Units,
+	"ApplicationSoftwareRevision": ApplicationSoftwareRevision,
+	DescriptionStr:                Description,
+	"FileSize":                    FileSize,
+	"FileType":                    FileType,
+	"FirmwareRevision":            FirmwareRevision,
+	"Location":                    Location,
+	"ModelName":                   ModelName,
+	"ObjectIdentifier":            ObjectIdentifier,
+	"ObjectList":                  ObjectList,
+	ObjectNameStr:                 ObjectName,
+	"ObjectReference":             ObjectReference,
+	"ObjectType":                  ObjectType,
+	"PresentValue":                PresentValue,
+	"PriorityArray":               PriorityArray,
+	"Units":                       Units,
+	"VendorNumber":                VendorNumber,
+	"VendorName":                  VendorName,
 }
 
+// strMapping is a human readable printing of the priority
 var strMapping = map[uint32]string{
-	Description:      "Description",
-	FileSize:         "File Size",
-	FileType:         "File Type",
-	ModelName:        "Model Name",
-	ObjectIdentifier: "Object Identifier",
-	ObjectList:       "Object List",
-	ObjectName:       "Object Name",
-	ObjectReference:  "Object Reference",
-	ObjectType:       "Object Type",
-	PresentValue:     "Present Value",
-	Units:            "Units",
+	ApplicationSoftwareRevision: "Application Software Revision",
+	Description:                 "Description",
+	FileSize:                    "File Size",
+	FileType:                    "File Type",
+	FirmwareRevision:            "Firmware Revision",
+	Location:                    "Location",
+	ModelName:                   "Model Name",
+	ObjectIdentifier:            "Object Identifier",
+	ObjectList:                  "Object List",
+	ObjectName:                  "Object Name",
+	ObjectReference:             "Object Reference",
+	ObjectType:                  "Object Type",
+	PresentValue:                "Present Value",
+	Units:                       "Units",
+	PriorityArray:               "Priority Array",
+	VendorNumber:                "Vendor Number",
+	VendorName:                  "Vendor Name",
 }
 
 // listOfKeys should be treated as read only after init

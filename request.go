@@ -83,8 +83,8 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 			log.Print(err)
 			continue
 		}
-
-		raw, err := c.tsm.Receive(id, time.Duration(5)*time.Second)
+		var raw interface{}
+		raw, err = c.tsm.Receive(id, time.Duration(5)*time.Second)
 		if err != nil {
 			continue
 		}
@@ -102,6 +102,7 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 		var apdu bactype.APDU
 		dec.APDU(&apdu)
 		dec.ReadProperty(&out)
+		// why did this go away in https://github.com/alexbeltran/gobacnet/pull/28/files ?
 		if err = dec.Error(); err != nil {
 			continue
 		}

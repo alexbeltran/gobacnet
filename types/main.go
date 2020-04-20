@@ -41,6 +41,13 @@ type Enumerated uint32
 type ObjectType uint16
 type ObjectInstance uint32
 
+// Null is used when a value is empty.
+type Null struct{}
+
+func (n Null) String() string {
+	return "<null>"
+}
+
 type ObjectID struct {
 	Type     ObjectType
 	Instance ObjectInstance
@@ -156,8 +163,9 @@ func UDPToAddress(n *net.UDPAddr) Address {
 	length := net.IPv4len + 2
 	a.Mac = make([]uint8, length)
 	//Encode ip
+	ip4 := n.IP.To4()
 	for i := 0; i < net.IPv4len; i++ {
-		a.Mac[i] = n.IP[i]
+		a.Mac[i] = ip4[i]
 	}
 
 	// Encode port
