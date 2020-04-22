@@ -114,7 +114,7 @@ type APDU struct {
 	MaxApdu                   uint
 	InvokeId                  uint8
 	Sequence                  uint8
-	WindowNumber              uint8
+	WindowSize                uint8
 	Service                   ServiceConfirmed
 	UnconfirmedService        ServiceUnconfirmed
 	Error                     struct {
@@ -132,18 +132,18 @@ type PDUType uint8
 // pdu requests
 const (
 	ConfirmedServiceRequest   PDUType = 0
-	UnconfirmedServiceRequest PDUType = 0x10
-	SimpleAck                 PDUType = 0x20
-	ComplexAck                PDUType = 0x30
-	SegmentAck                PDUType = 0x40
-	Error                     PDUType = 0x50
-	Reject                    PDUType = 0x60
-	Abort                     PDUType = 0x70
+	UnconfirmedServiceRequest PDUType = 0x1
+	SimpleAck                 PDUType = 0x2
+	ComplexAck                PDUType = 0x3
+	SegmentAck                PDUType = 0x4
+	Error                     PDUType = 0x5
+	Reject                    PDUType = 0x6
+	Abort                     PDUType = 0x7
 )
 
 // IsConfirmedServiceRequest checks to see if the APDU is in the list of known services
 func (a *APDU) IsConfirmedServiceRequest() bool {
-	return (0xF0 & a.DataType) == ConfirmedServiceRequest
+	return a.DataType == ConfirmedServiceRequest
 }
 
 func (s *ServiceConfirmed) String() string {

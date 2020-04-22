@@ -33,6 +33,7 @@ package encoding
 
 import (
 	"fmt"
+	"reflect"
 
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
@@ -134,6 +135,10 @@ func (e *Encoder) date(dt bactype.Date) {
 
 func (d *Decoder) date(dt *bactype.Date) {
 	var year, month, day, dayOfWeek uint8
+	d.decode(&year)
+	d.decode(&month)
+	d.decode(&day)
+	d.decode(&dayOfWeek)
 
 	if dt.Year != bactype.UnspecifiedTime {
 		dt.Year = int(year) + epochYear
@@ -196,6 +201,133 @@ func (d *Decoder) double(x *float64) {
 	d.decode(x)
 }
 
+// Supports protocolservices,
+func (e *Encoder) bitString(i interface{}) error {
+	bits := &bactype.BitString{}
+	var err error
+	switch val := i.(type) {
+	case bactype.ServicesSupported:
+		bits, err = TypeToBitString(val)
+	case bactype.TypesSupported:
+		bits, err = TypeToBitString(val)
+	case bactype.BitString:
+		bits = &val
+	default:
+		return fmt.Errorf("Unsupported type for bitstring")
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Get the length and remainder
+	length := bits.ByteLengthOfBitsAndRemainder()
+	if len(bits.Bits) > 0 {
+		// Calculate the remainder
+		remainder := len(bits.Bits) % 8
+		if remainder > 0 {
+			remainder = 8 - remainder
+		}
+
+		// Serialize to a byte array
+		byteCount := (len(bits.Bits) + 7) / 8
+		data := make([]byte, byteCount)
+		for i := 0; i < len(bits.Bits); i++ {
+			if bits.Bits[i] {
+				data[i/8] |= 1 << (7 - (i % 8))
+			}
+		}
+
+		e.tag(tagInfo{ID: tagBitString, Context: appLayerContext, Value: uint32(length)})
+		e.write(byte(remainder))
+		e.octetstring(data)
+	} else {
+		e.tag(tagInfo{ID: tagBitString, Context: appLayerContext, Value: uint32(length)})
+
+		// No bits means no remainder
+		e.write(byte(0))
+	}
+
+	return nil
+}
+
+func (d *Decoder) bitString(len int) (interface{}, error) {
+	// Get the remainder value
+	var remainder byte
+	d.decode(&remainder)
+
+	// Length includes the remainder
+	len--
+
+	if len == 0 {
+		// Empty
+		return bactype.BitString{}, nil
+	}
+
+	// Read the octet stream
+	var b []byte
+	d.octetstring(&b, len)
+
+	// bit values
+	bitVals := (len * 8) - int(remainder)
+
+	// Deserialize to a bitString
+	bs := bactype.BitString{
+		Bits: make([]bool, bitVals),
+	}
+	for i := 0; i < bitVals; i++ {
+		if ((b[i/8] >> (7 - (i % 8))) & 0x1) == 1 {
+			bs.Bits[i] = true
+		} else {
+			bs.Bits[i] = false
+		}
+	}
+
+	return bs, nil
+}
+
+func BitStringToType(bs bactype.BitString, i interface{}) error {
+	v := reflect.ValueOf(i).Elem()
+
+	if len(bs.Bits) != v.NumField() {
+		return fmt.Errorf("Type %T has the wrong number of fields for this bitstring (%d vs %d)", i, v.NumField(), len(bs.Bits))
+	}
+
+	//typeOfT := v.Elem().Nu.Type()
+	for itr := 0; itr < v.NumField(); itr++ {
+		f := v.Field(itr)
+		if f.IsValid() && f.CanSet() {
+			if f.Kind() == reflect.Bool {
+				f.SetBool(bs.Bits[itr])
+			} else {
+				return fmt.Errorf("Type has non-bool fields")
+			}
+		} else {
+			return fmt.Errorf("Type has inaccessible field")
+		}
+	}
+
+	return nil
+}
+
+func TypeToBitString(i interface{}) (*bactype.BitString, error) {
+	v := reflect.ValueOf(i)
+
+	bs := bactype.BitString{
+		Bits: make([]bool, v.NumField()),
+	}
+
+	for i := 0; i < v.NumField(); i++ {
+		switch val := v.Field(i).Interface().(type) {
+		case bool:
+			bs.Bits[i] = val
+		default:
+			return nil, fmt.Errorf("Type %T has non-bool types", i)
+		}
+	}
+
+	return &bs, nil
+}
 func (e *Encoder) AppData(i interface{}) error {
 	switch val := i.(type) {
 	case float32:
@@ -214,6 +346,10 @@ func (e *Encoder) AppData(i interface{}) error {
 		length := valueLength(val)
 		e.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: uint32(length)})
 		e.unsigned(val)
+	case []byte:
+		length := len(val)
+		e.tag(tagInfo{ID: tagOctetString, Context: appLayerContext, Value: uint32(length)})
+		e.octetstring(val)
 
 	// Enumerated is pretty much a wrapper for a uint32 with an enumerated associated with it.
 	case bactype.Enumerated:
@@ -226,6 +362,18 @@ func (e *Encoder) AppData(i interface{}) error {
 		e.objectId(val.Type, val.Instance)
 	case bactype.Null:
 		e.tag(tagInfo{ID: tagNull, Context: appLayerContext})
+	case bactype.Date:
+		e.tag(tagInfo{ID: tagDate, Context: appLayerContext, Value: 4})
+		e.date(val)
+	case bactype.Time:
+		e.tag(tagInfo{ID: tagTime, Context: appLayerContext, Value: 4})
+		e.time(val)
+	case bactype.ServicesSupported:
+		e.bitString(val)
+	case bactype.TypesSupported:
+		e.bitString(val)
+	case bactype.BitString:
+		e.bitString(val)
 
 	default:
 		err := fmt.Errorf("Unknown type %T", i)
@@ -270,7 +418,8 @@ func (d *Decoder) AppData() (interface{}, error) {
 		err := d.string(&s, len-1)
 		return s, err
 	case tagBitString:
-		return nil, fmt.Errorf("decoding bit strings is currently unsupported")
+		i, err := d.bitString(len)
+		return i, err
 	case tagEnumerated:
 		return d.enumerated(len), d.Error()
 	case tagDate:

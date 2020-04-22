@@ -41,9 +41,10 @@ import (
 
 // Decoder used
 type Decoder struct {
-	buff       *bytes.Buffer
-	err        error
-	tagCounter int
+	buff                      *bytes.Buffer
+	err                       error
+	tagCounter                int
+	IgnorePropertyAccessError bool
 }
 
 func (d *Decoder) len() int {
@@ -51,9 +52,10 @@ func (d *Decoder) len() int {
 }
 func NewDecoder(b []byte) *Decoder {
 	return &Decoder{
-		bytes.NewBuffer(b),
-		nil,
-		0,
+		buff:                      bytes.NewBuffer(b),
+		err:                       nil,
+		tagCounter:                0,
+		IgnorePropertyAccessError: false,
 	}
 }
 
@@ -97,6 +99,20 @@ func (d *Decoder) tagNumber() (tag uint8, meta tagMeta) {
 	return uint8(meta) >> 4, meta
 }
 
+// Same as above, but does not advance the buffer offset
+func (d *Decoder) tagNumberPeek() (tag uint8, meta tagMeta) {
+	// Read the first value
+	d.decode(&meta)
+	if meta.isExtendedTagNumber() {
+		d.decode(&tag)
+		d.buff.UnreadByte()
+		d.buff.UnreadByte()
+		return tag, meta
+	}
+	d.buff.UnreadByte()
+	return uint8(meta) >> 4, meta
+}
+
 func (d *Decoder) value(meta tagMeta) (value uint32) {
 	if meta.isExtendedValue() {
 		var val uint8
@@ -132,7 +148,7 @@ func (d *Decoder) tagNumberAndValue() (tag uint8, meta tagMeta, value uint32) {
 func (d *Decoder) objectId() (objectType bactype.ObjectType, instance bactype.ObjectInstance) {
 	var value uint32
 	d.decode(&value)
-	objectType = bactype.ObjectType((value >> InstanceBits) & MaxObject)
+	objectType = bactype.ObjectType((value >> InstanceBits) & uint32(bactype.MaxObject))
 	instance = bactype.ObjectInstance(value & MaxInstance)
 	return
 }

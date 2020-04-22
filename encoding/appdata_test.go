@@ -44,7 +44,24 @@ func subTestSimpleData(t *testing.T, d *Decoder, x interface{}) func(t *testing.
 			t.Fatal(err)
 		}
 		if !reflect.DeepEqual(x, y) {
-			t.Errorf("Mismatch between decrypted values. Received %v, expected %v", y, x)
+			t.Errorf("Mismatch between decoded values. Received %v, expected %v", y, x)
+		}
+	}
+}
+
+func subTestTypedBitString(t *testing.T, d *Decoder, x interface{}) func(t *testing.T) {
+	return func(t *testing.T) {
+		y, err := d.AppData()
+		if err != nil {
+			t.Fatal(err)
+		}
+		z := types.ServicesSupported{}
+		err = BitStringToType(y.(types.BitString), &z)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !reflect.DeepEqual(x, z) {
+			t.Errorf("Mismatch between decoded values. Received %v, expected %v", y, x)
 		}
 	}
 }
@@ -75,11 +92,39 @@ func generalSimpleDataTypes(t *testing.T, generic bool) func(t *testing.T) {
 		// Stored as 32
 		var large uint32 = 0xFFFFFFF0
 
+		// bitstring
+		bitstring := types.BitString{
+			Bits: []bool{
+				true,
+				false,
+				false,
+				true,
+				true,
+				true,
+				false,
+				false,
+				false,
+				false,
+				true,
+				true,
+				true,
+				true,
+				true,
+			},
+		}
+
+		// typed bitstring
+		typedBitstring := types.ServicesSupported{
+			DeleteObject:           true,
+			ReinitializeDevice:     true,
+			UnconfirmedTextMessage: true,
+		}
+
 		str := "my pizza pizza"
 		objID := types.ObjectID{93, 42}
 
 		if generic {
-			values := []interface{}{real, double, boolean, !boolean, small, medium, wtf, large, str, objID}
+			values := []interface{}{real, double, boolean, !boolean, small, medium, wtf, large, str, objID, bitstring, typedBitstring}
 			for _, v := range values {
 				enc.AppData(v)
 			}
@@ -111,6 +156,10 @@ func generalSimpleDataTypes(t *testing.T, generic bool) func(t *testing.T) {
 
 			enc.tag(tagInfo{ID: tagObjectID, Context: appLayerContext, Value: objectIDLen})
 			enc.objectId(objID.Type, objID.Instance)
+
+			enc.bitString(bitstring)
+
+			enc.bitString(typedBitstring)
 		}
 
 		if err := enc.Error(); err != nil {
@@ -128,6 +177,8 @@ func generalSimpleDataTypes(t *testing.T, generic bool) func(t *testing.T) {
 		t.Run("Encoding uint32", subTestSimpleData(t, dec, large))
 		t.Run("Encoding string", subTestSimpleData(t, dec, str))
 		t.Run("Encoding object id", subTestSimpleData(t, dec, objID))
+		t.Run("Encoding bitstring", subTestSimpleData(t, dec, bitstring))
+		t.Run("Encoding typed bitstring", subTestTypedBitString(t, dec, typedBitstring))
 
 		if err := dec.Error(); err != nil {
 			t.Fatal(err)

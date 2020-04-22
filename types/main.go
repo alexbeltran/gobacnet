@@ -35,6 +35,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+
+	"github.com/alexbeltran/gobacnet/property"
 )
 
 type Enumerated uint32
@@ -47,6 +49,32 @@ type Null struct{}
 func (n Null) String() string {
 	return "<null>"
 }
+
+const (
+	AnalogInput       ObjectType = 0
+	AnalogOutput      ObjectType = 1
+	AnalogValue       ObjectType = 2
+	BinaryInput       ObjectType = 3
+	BinaryOutput      ObjectType = 4
+	BinaryValue       ObjectType = 5
+	Calendar          ObjectType = 6
+	Command           ObjectType = 7
+	DeviceType        ObjectType = 8
+	EventEnrollment   ObjectType = 9
+	File              ObjectType = 10
+	Group             ObjectType = 11
+	Loop              ObjectType = 12
+	MultistateInput   ObjectType = 13
+	MultistateOutput  ObjectType = 14
+	NotificationClass ObjectType = 15
+	Program           ObjectType = 16
+	Schedule          ObjectType = 17
+	MultiStateValue   ObjectType = 19
+	TrendLog          ObjectType = 20
+	CharacterString   ObjectType = 40
+
+	MaxObject ObjectType = 0x3FF
+)
 
 type ObjectID struct {
 	Type     ObjectType
@@ -61,7 +89,7 @@ type Object struct {
 }
 
 type Property struct {
-	Type       uint32
+	Type       property.PropertyID
 	ArrayIndex uint32
 	Data       interface{}
 }

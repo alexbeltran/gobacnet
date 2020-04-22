@@ -144,7 +144,7 @@ func TestAPDU(t *testing.T) {
 	// Segmented message
 	a.SegmentedMessage = true
 	a.Sequence = 31
-	a.WindowNumber = 43
+	a.WindowSize = 43
 	t.Run("Segmented Message Test", subTestAPDU(t, a))
 
 	a.MaxSegs = 65

@@ -3,6 +3,7 @@ package encoding
 import (
 	"fmt"
 
+	"github.com/alexbeltran/gobacnet/property"
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
@@ -43,7 +44,7 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 	for _, prop := range properties {
 		// Tag 2 - Property ID
 		tag = 2
-		e.contextEnumerated(tag, prop.Type)
+		e.contextEnumerated(tag, uint32(prop.Type))
 
 		// Tag 3 (OPTIONAL) - Array Length
 		tag++
@@ -64,6 +65,8 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 }
 
 func (d *Decoder) ReadMultiplePropertyAck(data *bactype.ReadMultipleProperty) error {
+	// TODO: This should really make use of the "encoding/asn1" package instead of trying to reimplement it
+	//       https://gist.github.com/splatch/d511cd4a3d73137763f498db75ecaf1f
 	err := d.objectsWithData(&data.Objects)
 	if err != nil {
 		d.err = err
@@ -137,7 +140,7 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
 			}
 			prop := bactype.Property{}
-			prop.Type = d.enumerated(int(length))
+			prop.Type = property.PropertyID(d.enumerated(int(length)))
 
 			// Tag 3 - (Optional) Array Length
 			tag, meta = d.tagNumber()
@@ -162,6 +165,22 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 					if err != nil {
 						return err
 					}
+					// Property access error - does the caller want us to just nil the value?
+					if d.IgnorePropertyAccessError {
+						tag, meta = d.tagNumber()
+						expectedTag = 5
+						if tag != expectedTag {
+							return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
+						}
+						if !meta.isClosing() {
+							return &ErrorWrongTagType{ClosingTag}
+						}
+
+						// Move on
+						tag, meta, length = d.tagNumberAndValue()
+						continue
+					}
+
 					return fmt.Errorf("Class %d Code %d", class, code)
 				}
 				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
@@ -169,11 +188,19 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 			if !meta.isOpening() {
 				return &ErrorWrongTagType{OpeningTag}
 			}
-			data, err := d.AppData()
-			if err != nil {
-				return err
+
+			// If we run straight in to a closing tag, treat it as a tagNull
+			// (shaking my fist at Lithonia Lighting...)
+			tagPeek, metaPeek := d.tagNumberPeek()
+			if tagPeek == 4 && metaPeek.isClosing() {
+				prop.Data = bactype.Null{}
+			} else {
+				data, err := d.AppData()
+				if err != nil {
+					return err
+				}
+				prop.Data = data
 			}
-			prop.Data = data
 			obj.Properties = append(obj.Properties, prop)
 
 			tag, meta = d.tagNumber()

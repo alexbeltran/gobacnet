@@ -53,15 +53,15 @@ func (e *Encoder) APDU(a bactype.APDU) error {
 	case bactype.ConfirmedServiceRequest:
 		e.apduConfirmed(a)
 	case bactype.SegmentAck:
-		return fmt.Errorf("Decoded Segmented")
+		return fmt.Errorf("Encoded Segmented")
 	case bactype.Error:
-		return fmt.Errorf("Decoded Error")
+		return fmt.Errorf("Encoded Error")
 	case bactype.Reject:
-		return fmt.Errorf("Decoded Rejected")
+		return fmt.Errorf("Encoded Rejected")
 	case bactype.Abort:
-		return fmt.Errorf("Decoded Aborted")
+		return fmt.Errorf("Encoded Aborted")
 	default:
-		return fmt.Errorf("Unknown PDU type:%d", meta.DataType)
+		return fmt.Errorf("Unknown PDU type:%d", meta.DataType())
 	}
 	return nil
 }
@@ -71,7 +71,7 @@ func (e *Encoder) apduConfirmed(a bactype.APDU) {
 	e.write(a.InvokeId)
 	if a.SegmentedMessage {
 		e.write(a.Sequence)
-		e.write(a.WindowNumber)
+		e.write(a.WindowSize)
 	}
 	e.write(a.Service)
 }
@@ -82,6 +82,10 @@ func (e *Encoder) apduUnconfirmed(a bactype.APDU) {
 
 func (e *Encoder) apduComplexAck(a bactype.APDU) {
 	e.write(a.InvokeId)
+	if a.SegmentedMessage {
+		e.write(a.Sequence)
+		e.write(a.WindowSize)
+	}
 	e.write(a.Service)
 }
 
@@ -145,6 +149,10 @@ func (d *Decoder) apduError(a *bactype.APDU) error {
 
 func (d *Decoder) apduComplexAck(a *bactype.APDU) error {
 	d.decode(&a.InvokeId)
+	if a.SegmentedMessage {
+		d.decode(&a.Sequence)
+		d.decode(&a.WindowSize)
+	}
 	d.decode(&a.Service)
 	return d.Error()
 }
@@ -167,7 +175,7 @@ func (d *Decoder) apduConfirmed(a *bactype.APDU) error {
 	d.decode(&a.InvokeId)
 	if a.SegmentedMessage {
 		d.decode(&a.Sequence)
-		d.decode(&a.WindowNumber)
+		d.decode(&a.WindowSize)
 	}
 
 	d.decode(&a.Service)
@@ -223,9 +231,9 @@ func (meta *APDUMetadata) setSegmentedAccepted(b bool) {
 
 func (meta *APDUMetadata) setDataType(t bactype.PDUType) {
 	// clean the first 4 bits
-	*meta = (*meta & APDUMetadata(0xF0)) | APDUMetadata(t)
+	*meta = (*meta & APDUMetadata(0xF0)) | APDUMetadata(t<<4)
 }
 func (meta *APDUMetadata) DataType() bactype.PDUType {
 	// clean the first 4 bits
-	return bactype.PDUType(0xF0) & bactype.PDUType(*meta)
+	return (bactype.PDUType(0xF0) & bactype.PDUType(*meta)) >> 4
 }

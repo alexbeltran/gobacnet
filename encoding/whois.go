@@ -40,8 +40,7 @@ func (e *Encoder) WhoIs(low, high int32) error {
 		DataType:           bactype.UnconfirmedServiceRequest,
 		UnconfirmedService: bactype.ServiceUnconfirmedWhoIs,
 	}
-	e.write(apdu.DataType)
-	e.write(apdu.UnconfirmedService)
+	e.APDU(apdu)
 
 	// The range is optional. A scan for all objects is done when either low/high
 	// are negative or when we are scanning above the max instance

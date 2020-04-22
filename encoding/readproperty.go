@@ -34,6 +34,7 @@ package encoding
 import (
 	"fmt"
 
+	"github.com/alexbeltran/gobacnet/property"
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
@@ -52,7 +53,7 @@ func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData
 
 	// Get first property
 	prop := data.Object.Properties[0]
-	e.contextEnumerated(tagPos, prop.Type)
+	e.contextEnumerated(tagPos, uint32(prop.Type))
 	tagPos++
 
 	// Optional Tag - Array Index
@@ -142,7 +143,7 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 	lenValue := d.value(meta)
 
 	var prop bactype.Property
-	prop.Type = d.enumerated(int(lenValue))
+	prop.Type = property.PropertyID(d.enumerated(int(lenValue)))
 
 	if d.len() != 0 {
 		tag, meta = d.tagNumber()

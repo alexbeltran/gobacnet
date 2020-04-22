@@ -7,7 +7,7 @@ import (
 
 const numOfAdditionalSpaces = 15
 
-func longestString(x map[string]uint32) int {
+func longestString(x map[string]PropertyID) int {
 	max := 0
 	for k, _ := range x {
 		if len(k) > max {

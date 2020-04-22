@@ -161,7 +161,7 @@ func TestIAmRealData(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		log.Printf("app: %v", x)
+		log.Printf("Decoded IAm field: %v", x)
 	}
 }
 

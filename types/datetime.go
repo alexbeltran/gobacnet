@@ -42,6 +42,8 @@ const (
 	Friday    DayOfWeek = iota
 	Saturday  DayOfWeek = iota
 	Sunday    DayOfWeek = iota
+
+	AnyDayOfWeek DayOfWeek = 0xFF
 )
 
 type Date struct {

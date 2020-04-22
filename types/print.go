@@ -188,34 +188,26 @@ var unitsTypeMap = map[int]string{
 }
 
 const (
-	AnalogInput       ObjectType = 0
-	AnalogOutput      ObjectType = 1
-	AnalogValue       ObjectType = 2
-	BinaryInput       ObjectType = 3
-	BinaryOutput      ObjectType = 4
-	BinaryValue       ObjectType = 5
-	DeviceType        ObjectType = 8
-	File              ObjectType = 10
-	MultiStateInput   ObjectType = 13
-	NotificationClass ObjectType = 15
-	MultiStateValue   ObjectType = 19
-	TrendLog          ObjectType = 20
-	CharacterString   ObjectType = 40
-)
-
-const (
 	AnalogInputStr       = "Analog Input"
 	AnalogOutputStr      = "Analog Output"
 	AnalogValueStr       = "Analog Value"
 	BinaryInputStr       = "Binary Input"
 	BinaryOutputStr      = "Binary Output"
 	BinaryValueStr       = "Binary Value"
+	CalendarStr          = "Calendar"
+	CommandStr           = "Command"
 	DeviceTypeStr        = "Device"
+	EventEnrollmentStr   = "Event Enrollment"
 	FileStr              = "File"
+	GroupStr             = "Group"
+	LoopStr              = "Loop"
+	MultistateInputStr   = "Multistate Input"
+	MultistateOutputStr  = "Multistate Output"
 	NotificationClassStr = "Notification Class"
+	ProgramStr           = "Program"
+	ScheduleStr          = "Schedule"
 	MultiStateValueStr   = "Multi-State Value"
-	MultiStateInputStr   = "Multi-State Input"
-	TrendLogStr          = "Trend Log"
+	TrendLogStr          = "TrendLog"
 	CharacterStringStr   = "Character String"
 )
 
@@ -226,11 +218,19 @@ var objTypeMap = map[ObjectType]string{
 	BinaryInput:       BinaryInputStr,
 	BinaryOutput:      BinaryOutputStr,
 	BinaryValue:       BinaryValueStr,
+	Calendar:          CalendarStr,
+	Command:           CommandStr,
 	DeviceType:        DeviceTypeStr,
+	EventEnrollment:   EventEnrollmentStr,
 	File:              FileStr,
+	Group:             GroupStr,
+	Loop:              LoopStr,
+	MultistateInput:   MultistateInputStr,
+	MultistateOutput:  MultistateOutputStr,
 	NotificationClass: NotificationClassStr,
+	Program:           ProgramStr,
+	Schedule:          ScheduleStr,
 	MultiStateValue:   MultiStateValueStr,
-	MultiStateInput:   MultiStateInputStr,
 	TrendLog:          TrendLogStr,
 	CharacterString:   CharacterStringStr,
 }
@@ -242,9 +242,18 @@ var objStrTypeMap = map[string]ObjectType{
 	BinaryInputStr:       BinaryInput,
 	BinaryOutputStr:      BinaryOutput,
 	BinaryValueStr:       BinaryValue,
+	CalendarStr:          Calendar,
+	CommandStr:           Command,
 	DeviceTypeStr:        DeviceType,
+	EventEnrollmentStr:   EventEnrollment,
 	FileStr:              File,
+	GroupStr:             Group,
+	LoopStr:              Loop,
+	MultistateInputStr:   MultistateInput,
+	MultistateOutputStr:  MultistateOutput,
 	NotificationClassStr: NotificationClass,
+	ProgramStr:           Program,
+	ScheduleStr:          Schedule,
 	MultiStateValueStr:   MultiStateValue,
 	TrendLogStr:          TrendLog,
 	CharacterStringStr:   CharacterString,
