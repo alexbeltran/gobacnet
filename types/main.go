@@ -41,6 +41,13 @@ type Enumerated uint32
 type ObjectType uint16
 type ObjectInstance uint32
 
+// Null is used when a value is empty.
+type Null struct{}
+
+func (n Null) String() string {
+	return "<null>"
+}
+
 type ObjectID struct {
 	Type     ObjectType
 	Instance ObjectInstance

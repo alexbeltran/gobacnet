@@ -180,6 +180,7 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 			for i := 0; d.buff.Len() > 1; i++ {
 				data, err := d.AppData()
 				if err != nil {
+					d.err = err
 					return err
 				}
 				datalist = append(datalist, data)
@@ -191,6 +192,7 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 				prop.Data = datalist[0]
 			}
 			if err != nil {
+				d.err = err
 				return err
 			}
 		}

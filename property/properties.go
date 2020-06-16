@@ -14,6 +14,7 @@ const (
 	ObjectType       uint32 = 79
 	PresentValue     uint32 = 85
 	Units            uint32 = 117
+	PriorityArray    uint32 = 87
 )
 
 const (
@@ -34,8 +35,10 @@ var enumMapping = map[string]uint32{
 	"ObjectType":       ObjectType,
 	"PresentValue":     PresentValue,
 	"Units":            Units,
+	"PriorityArray":    PriorityArray,
 }
 
+// strMapping is a human readable printing of the priority
 var strMapping = map[uint32]string{
 	Description:      "Description",
 	FileSize:         "File Size",
@@ -48,6 +51,7 @@ var strMapping = map[uint32]string{
 	ObjectType:       "Object Type",
 	PresentValue:     "Present Value",
 	Units:            "Units",
+	PriorityArray:    "Priority Array",
 }
 
 // listOfKeys should be treated as read only after init
