@@ -32,7 +32,7 @@ a feature not in the list below add a discussion on github for it.
 - [x] Read Property
 - [x] Read Multiple Property
 - [ ] Read Range
-- [ ] Write Property
+- [x] Write Property
 - [ ] Write Property Multiple
 - [ ] Who Has
 - [ ] Change of Value Notification
