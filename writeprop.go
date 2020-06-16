@@ -9,7 +9,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) WriteProperty(dest bactype.Device, wp bactype.ReadPropertyData, priority uint) error {
+func (c *Client) WriteProperty(dest bactype.Device, wp bactype.ReadPropertyData, priority bactype.NPDUPriority) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	id, err := c.tsm.ID(ctx)
@@ -37,7 +37,7 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.ReadPropertyData,
 
 	enc.WriteProperty(uint8(id), wp, priority)
 	if enc.Error() != nil {
-		return err
+		return enc.Error()
 	}
 
 	// the value filled doesn't matter. it just needs to be non nil

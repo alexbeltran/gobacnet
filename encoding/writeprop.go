@@ -3,7 +3,7 @@ package encoding
 import bactype "github.com/alexbeltran/gobacnet/types"
 
 // WriteProperty encodes a write property request
-func (e *Encoder) WriteProperty(invokeID uint8, data bactype.ReadPropertyData, priority uint) error {
+func (e *Encoder) WriteProperty(invokeID uint8, data bactype.ReadPropertyData, priority bactype.NPDUPriority) error {
 	a := bactype.APDU{
 		DataType: bactype.ConfirmedServiceRequest,
 		Service:  bactype.ServiceConfirmedWriteProperty,
@@ -27,7 +27,7 @@ func (e *Encoder) WriteProperty(invokeID uint8, data bactype.ReadPropertyData, p
 
 	// Tag 4 - Optional priorty tag
 	// Priority set
-	if priority != 0 {
+	if priority != bactype.Normal {
 		e.contextUnsigned(tagID, uint32(priority))
 	}
 	return e.Error()
