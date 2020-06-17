@@ -71,7 +71,7 @@ func (c *Client) sendWriteMultipleProperty(id int, dev bactype.Device, request [
 	var b []byte
 	switch v := raw.(type) {
 	case error:
-		return err
+		return v
 	case []byte:
 		b = v
 	default:

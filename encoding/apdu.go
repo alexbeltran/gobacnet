@@ -118,27 +118,21 @@ func (d *Decoder) APDU(a *bactype.APDU) error {
 func (d *Decoder) apduError(a *bactype.APDU) error {
 	d.decode(&a.InvokeId)
 	d.decode(&a.Service)
-	class, err := d.AppData()
-	if err != nil {
-		return err
-	}
 
-	c, ok := class.(uint32)
-	if !ok {
-		return fmt.Errorf("Unable to decode error class")
+	_, meta := d.tagNumber()
+	if meta.isOpening() {
+		a.Error.Class = d.unsigned(int(d.value(meta)))
+		_, meta = d.tagNumber()
+		a.Error.Code = d.unsigned(int(d.value(meta)))
+		_, meta = d.tagNumber()
+		if !meta.isClosing() {
+			return &ErrorWrongTagType{ClosingTag}
+		}
+	} else {
+		a.Error.Class = d.unsigned(int(d.value(meta)))
+		_, meta = d.tagNumber()
+		a.Error.Code = d.unsigned(int(d.value(meta)))
 	}
-	a.Error.Class = c
-
-	code, err := d.AppData()
-	if err != nil {
-		return err
-	}
-
-	c, ok = code.(uint32)
-	if !ok {
-		return fmt.Errorf("Unable to decode error code")
-	}
-	a.Error.Code = c
 
 	return nil
 }
