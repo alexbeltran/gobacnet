@@ -9,7 +9,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) WriteMultiProperty(dest bactype.Device, wp bactype.MultiplePropertyData) error {
+func (c *Client) WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePropertyData) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	id, err := c.tsm.ID(ctx)
@@ -27,7 +27,7 @@ func (c *Client) WriteMultiProperty(dest bactype.Device, wp bactype.MultipleProp
 	enc := encoding.NewEncoder()
 	enc.NPDU(bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
-		Destination:           &dest.Addr,
+		Destination:           &dev.Addr,
 		Source:                &src,
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
@@ -40,37 +40,52 @@ func (c *Client) WriteMultiProperty(dest bactype.Device, wp bactype.MultipleProp
 		return enc.Error()
 	}
 
+	pack := enc.Bytes()
+	if dev.MaxApdu < uint32(len(pack)) {
+		return fmt.Errorf("read multiple property is too large (max: %d given: %d)", dev.MaxApdu, len(pack))
+	}
+
 	// the value filled doesn't matter. it just needs to be non nil
 	err = fmt.Errorf("go")
-	for count := 0; err != nil && count < 2; count++ {
-		var b []byte
-		var raw interface{}
-		_, err = c.send(dest.Addr, enc.Bytes())
-		if err != nil {
-			continue
-		}
 
-		raw, err = c.tsm.Receive(id, time.Duration(5)*time.Second)
-		if err != nil {
-			continue
+	for count := 0; err != nil && count < maxReattempt; count++ {
+		err = c.sendWriteMultipleProperty(id, dev, pack)
+		if err == nil {
+			return nil
 		}
-		switch v := raw.(type) {
-		case error:
-			return err
-		case []byte:
-			b = v
-		default:
-			return fmt.Errorf("received unknown datatype %T", raw)
-		}
+	}
+	return fmt.Errorf("failed %d tries: %v", maxReattempt, err)
+}
 
-		dec := encoding.NewDecoder(b)
-
-		var apdu bactype.APDU
-		dec.APDU(&apdu)
-		if err = dec.Error(); err != nil {
-			continue
-		}
+func (c *Client) sendWriteMultipleProperty(id int, dev bactype.Device, request []byte) error {
+	_, err := c.send(dev.Addr, request)
+	if err != nil {
 		return err
 	}
-	return err
+
+	raw, err := c.tsm.Receive(id, time.Duration(5)*time.Second)
+	if err != nil {
+		return fmt.Errorf("unable to receive id %d: %v", id, err)
+	}
+
+	var b []byte
+	switch v := raw.(type) {
+	case error:
+		return err
+	case []byte:
+		b = v
+	default:
+		return fmt.Errorf("received unknown datatype %T", raw)
+	}
+
+	dec := encoding.NewDecoder(b)
+
+	var apdu bactype.APDU
+	if err = dec.APDU(&apdu); err != nil {
+		return err
+	}
+	if apdu.Error.Class != 0 || apdu.Error.Code != 0 {
+		return fmt.Errorf("received error, class: %d, code: %d", apdu.Error.Class, apdu.Error.Code)
+	}
+	return nil
 }

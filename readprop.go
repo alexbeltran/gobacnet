@@ -84,7 +84,8 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bac
 			continue
 		}
 
-		raw, err := c.tsm.Receive(id, time.Duration(5)*time.Second)
+		var raw interface{}
+		raw, err = c.tsm.Receive(id, time.Duration(5)*time.Second)
 		if err != nil {
 			continue
 		}
@@ -100,8 +101,17 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bac
 		dec := encoding.NewDecoder(b)
 
 		var apdu bactype.APDU
-		dec.APDU(&apdu)
-		dec.ReadProperty(&out)
+		if err = dec.APDU(&apdu); err != nil {
+			continue
+		}
+		if apdu.Error.Class != 0 || apdu.Error.Code != 0 {
+			err = fmt.Errorf("received error, class: %d, code: %d", apdu.Error.Class, apdu.Error.Code)
+			continue
+		}
+
+		if err = dec.ReadProperty(&out); err != nil {
+			continue
+		}
 
 		return out, dec.Error()
 	}

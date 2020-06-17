@@ -66,10 +66,14 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) err
 		dec := encoding.NewDecoder(b)
 
 		var apdu bactype.APDU
-		dec.APDU(&apdu)
-		if err = dec.Error(); err != nil {
+		if err = dec.APDU(&apdu); err != nil {
 			continue
 		}
+		if apdu.Error.Class != 0 || apdu.Error.Code != 0 {
+			err = fmt.Errorf("received error, class: %d, code: %d", apdu.Error.Class, apdu.Error.Code)
+			continue
+		}
+
 		return err
 	}
 	return err
