@@ -121,19 +121,20 @@ func (d *Decoder) apduError(a *bactype.APDU) error {
 
 	_, meta := d.tagNumber()
 	if meta.isOpening() {
-		a.Error.Class = d.unsigned(int(d.value(meta)))
-		_, meta = d.tagNumber()
-		a.Error.Code = d.unsigned(int(d.value(meta)))
+		_, _, value := d.tagNumberAndValue()
+		a.Error.Class = d.unsigned(int(value))
+		_, _, value = d.tagNumberAndValue()
+		a.Error.Code = d.unsigned(int(value))
 		_, meta = d.tagNumber()
 		if !meta.isClosing() {
 			return &ErrorWrongTagType{ClosingTag}
 		}
 	} else {
-		a.Error.Class = d.unsigned(int(d.value(meta)))
-		_, meta = d.tagNumber()
-		a.Error.Code = d.unsigned(int(d.value(meta)))
+		_, _, value := d.tagNumberAndValue()
+		a.Error.Class = d.unsigned(int(value))
+		_, _, value = d.tagNumberAndValue()
+		a.Error.Code = d.unsigned(int(value))
 	}
-
 	return nil
 }
 
