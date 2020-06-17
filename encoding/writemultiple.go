@@ -6,7 +6,7 @@ import bactype "github.com/alexbeltran/gobacnet/types"
 func (e *Encoder) WriteMultiProperty(invokeID uint8, data bactype.MultiplePropertyData) error {
 	a := bactype.APDU{
 		DataType: bactype.ConfirmedServiceRequest,
-		Service:  bactype.ServiceConfirmedWriteProperty,
+		Service:  bactype.ServiceConfirmedWritePropMultiple,
 		MaxSegs:  0,
 		MaxApdu:  MaxAPDU,
 		InvokeId: invokeID,
