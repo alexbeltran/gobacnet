@@ -36,8 +36,6 @@ import (
 	"log"
 	"testing"
 
-	"github.com/alexbeltran/gobacnet/property"
-
 	"github.com/alexbeltran/gobacnet/types"
 )
 
@@ -112,7 +110,7 @@ func TestServices(t *testing.T) {
 
 func testReadPropertyService(c *Client, t *testing.T) {
 	dev, err := c.WhoIs(testServer, testServer)
-	read := types.ReadPropertyData{
+	read := types.PropertyData{
 		Object: types.Object{
 			ID: types.ObjectID{
 				Type:     types.AnalogValue,
@@ -120,7 +118,7 @@ func testReadPropertyService(c *Client, t *testing.T) {
 			},
 			Properties: []types.Property{
 				types.Property{
-					Type:       property.ObjectName, // Present value
+					Type:       types.PropObjectName, // Present value
 					ArrayIndex: ArrayAll,
 				},
 			},
@@ -153,7 +151,7 @@ func testWhoIs(c *Client, t *testing.T) {
 func testWritePropertyService(c *Client, t *testing.T) {
 	const targetName = "Hotdog"
 	dev, err := c.WhoIs(testServer, testServer)
-	wp := types.ReadPropertyData{
+	wp := types.PropertyData{
 		Object: types.Object{
 			ID: types.ObjectID{
 				Type:     types.AnalogValue,
@@ -161,8 +159,9 @@ func testWritePropertyService(c *Client, t *testing.T) {
 			},
 			Properties: []types.Property{
 				types.Property{
-					Type:       property.ObjectName, // Present value
+					Type:       types.PropObjectName, // Present value
 					ArrayIndex: ArrayAll,
+					Priority:   types.Normal,
 				},
 			},
 		},
@@ -180,7 +179,7 @@ func testWritePropertyService(c *Client, t *testing.T) {
 	t.Logf("original name is: %d", org)
 
 	wp.Object.Properties[0].Data = targetName
-	err = c.WriteProperty(dev[0], wp, 0)
+	err = c.WriteProperty(dev[0], wp)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -202,7 +201,7 @@ func testWritePropertyService(c *Client, t *testing.T) {
 
 	// Revert Changes
 	wp.Object.Properties[0].Data = org
-	err = c.WriteProperty(dev[0], wp, 0)
+	err = c.WriteProperty(dev[0], wp)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -3,17 +3,16 @@ package gobacnet
 import (
 	"fmt"
 
-	"github.com/alexbeltran/gobacnet/property"
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
 func (c *Client) objectListLen(dev bactype.Device) (int, error) {
-	rp := bactype.ReadPropertyData{
+	rp := bactype.PropertyData{
 		Object: bactype.Object{
 			ID: dev.ID,
 			Properties: []bactype.Property{
 				bactype.Property{
-					Type:       property.ObjectList,
+					Type:       bactype.PropObjectList,
 					ArrayIndex: 0,
 				},
 			},
@@ -37,7 +36,7 @@ func (c *Client) objectListLen(dev bactype.Device) (int, error) {
 }
 
 func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Object, error) {
-	rpm := bactype.ReadMultipleProperty{
+	rpm := bactype.MultiplePropertyData{
 		Objects: []bactype.Object{
 			bactype.Object{
 				ID: dev.ID,
@@ -47,7 +46,7 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 
 	for i := start; i <= end; i++ {
 		rpm.Objects[0].Properties = append(rpm.Objects[0].Properties, bactype.Property{
-			Type:       property.ObjectList,
+			Type:       bactype.PropObjectList,
 			ArrayIndex: uint32(i),
 		})
 	}
@@ -123,7 +122,7 @@ func (c *Client) objectInformation(dev *bactype.Device, objs []bactype.Object) e
 	// same order we issue the commands.
 	keys := make([]bactype.ObjectID, len(objs))
 	counter := 0
-	rpm := bactype.ReadMultipleProperty{
+	rpm := bactype.MultiplePropertyData{
 		Objects: []bactype.Object{},
 	}
 
@@ -137,11 +136,11 @@ func (c *Client) objectInformation(dev *bactype.Device, objs []bactype.Object) e
 			ID: o.ID,
 			Properties: []bactype.Property{
 				bactype.Property{
-					Type:       property.ObjectName,
+					Type:       bactype.PropObjectName,
 					ArrayIndex: bactype.ArrayAll,
 				},
 				bactype.Property{
-					Type:       property.Description,
+					Type:       bactype.PropDescription,
 					ArrayIndex: bactype.ArrayAll,
 				},
 			},

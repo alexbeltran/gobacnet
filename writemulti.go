@@ -9,7 +9,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) error {
+func (c *Client) WriteMultiProperty(dest bactype.Device, wp bactype.MultiplePropertyData, priority bactype.NPDUPriority) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	id, err := c.tsm.ID(ctx)
@@ -35,7 +35,7 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) err
 		HopCount:              bactype.DefaultHopCount,
 	})
 
-	enc.WriteProperty(uint8(id), wp)
+	enc.WriteMultiProperty(uint8(id), wp, priority)
 	if enc.Error() != nil {
 		return enc.Error()
 	}

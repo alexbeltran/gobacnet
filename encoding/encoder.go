@@ -189,3 +189,52 @@ func (e *Encoder) unsigned(value uint32) {
 		e.write(value)
 	}
 }
+
+func (e *Encoder) objects(objects []bactype.Object, write bool) error {
+	var tag uint8
+	for _, obj := range objects {
+		tag = 0
+		e.contextObjectID(tag, obj.ID.Type, obj.ID.Instance)
+		// Tag 1 - Opening Tag
+		tag = 1
+		e.openingTag(tag)
+
+		e.properties(obj.Properties, write)
+
+		// Tag 1 - Closing Tag
+		e.closingTag(tag)
+	}
+	return nil
+}
+
+func (e *Encoder) properties(properties []bactype.Property, write bool) error {
+	// for each property
+	var tag uint8
+	for _, prop := range properties {
+		// Tag 0 - Property ID
+		tag = 0
+		e.contextEnumerated(tag, uint32(prop.Type))
+
+		// Tag 1 (OPTIONAL) - Array Length
+		if prop.ArrayIndex != ArrayAll {
+			tag = 1
+			e.contextUnsigned(tag, prop.ArrayIndex)
+		}
+
+		if write {
+			// Tag 2 - Opening Tag
+			tag = 2
+			e.openingTag(tag)
+
+			e.AppData(prop.Data)
+
+			// Tag 2 - Closing Tag
+			e.closingTag(tag)
+
+			if prop.Priority != bactype.Normal {
+				e.contextUnsigned(tag, uint32(prop.Priority))
+			}
+		}
+	}
+	return nil
+}

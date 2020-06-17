@@ -1,14 +1,39 @@
+/*Copyright (C) 2017 Alex Beltran
+
+This program is free software; you can redistribute it and/or
+modify it under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2
+of the License, or (at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program; if not, write to:
+The Free Software Foundation, Inc.
+59 Temple Place - Suite 330
+Boston, MA  02111-1307, USA.
+
+As a special exception, if other files instantiate templates or
+use macros or inline functions from this file, or you compile
+this file and link it with other works to produce a work based
+on this file, this file does not by itself cause the resulting
+work to be covered by the GNU General Public License. However
+the source code for this file must still be made available in
+accordance with section (3) of the GNU General Public License.
+
+This exception does not invalidate any other reasons why a work
+based on this file might be covered by the GNU General Public
+License.
+*/
+
 package types
 
-import (
-	"bytes"
-	"fmt"
-	"strings"
+import "fmt"
 
-	"github.com/alexbeltran/gobacnet/property"
-)
-
-const defaultSpacing = 4
+type ObjectType uint16
 
 const (
 	AnalogInput       ObjectType = 0
@@ -89,27 +114,21 @@ func (t ObjectType) String() string {
 	return fmt.Sprintf("%s", s)
 }
 
+type ObjectInstance uint32
+
+type ObjectID struct {
+	Type     ObjectType
+	Instance ObjectInstance
+}
+
 // String returns a pretty print of the ObjectID structure
 func (id ObjectID) String() string {
 	return fmt.Sprintf("Instance: %d Type: %s", id.Instance, id.Type.String())
 }
 
-// String returns a pretty print of the read multiple property structure
-func (rp ReadMultipleProperty) String() string {
-	buff := bytes.Buffer{}
-	spacing := strings.Repeat(" ", defaultSpacing)
-	for _, obj := range rp.Objects {
-		buff.WriteString(obj.ID.String())
-		buff.WriteString("\n")
-		for _, prop := range obj.Properties {
-			buff.WriteString(spacing)
-			buff.WriteString(property.String(prop.Type))
-			buff.WriteString(fmt.Sprintf("[%v]", prop.ArrayIndex))
-			buff.WriteString(": ")
-			buff.WriteString(fmt.Sprintf("%v", prop.Data))
-			buff.WriteString("\n")
-		}
-		buff.WriteString("\n")
-	}
-	return buff.String()
+type Object struct {
+	Name        string
+	Description string
+	ID          ObjectID
+	Properties  []Property `json:",omitempty"`
 }

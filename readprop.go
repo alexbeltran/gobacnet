@@ -42,18 +42,18 @@ import (
 )
 
 // ReadProperty reads a single property from a single object in the given device.
-func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) (bactype.ReadPropertyData, error) {
+func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bactype.PropertyData, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	id, err := c.tsm.ID(ctx)
 	if err != nil {
-		return bactype.ReadPropertyData{}, fmt.Errorf("unable to get an transaction id: %v", err)
+		return bactype.PropertyData{}, fmt.Errorf("unable to get an transaction id: %v", err)
 	}
 	defer c.tsm.Put(id)
 
 	udp, err := c.localUDPAddress()
 	if err != nil {
-		return bactype.ReadPropertyData{}, err
+		return bactype.PropertyData{}, err
 	}
 	src := bactype.UDPToAddress(udp)
 
@@ -70,14 +70,14 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 
 	enc.ReadProperty(uint8(id), rp)
 	if enc.Error() != nil {
-		return bactype.ReadPropertyData{}, err
+		return bactype.PropertyData{}, err
 	}
 
 	// the value filled doesn't matter. it just needs to be non nil
 	err = fmt.Errorf("go")
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
-		var out bactype.ReadPropertyData
+		var out bactype.PropertyData
 		_, err = c.send(dest.Addr, enc.Bytes())
 		if err != nil {
 			log.Print(err)
@@ -105,5 +105,5 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 
 		return out, dec.Error()
 	}
-	return bactype.ReadPropertyData{}, err
+	return bactype.PropertyData{}, err
 }

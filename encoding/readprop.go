@@ -37,12 +37,12 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData) (uint8, error) {
+func (e *Encoder) readPropertyHeader(tagPos uint8, data *bactype.PropertyData) (uint8, error) {
 	// Validate data first
 	if err := isValidObjectType(data.Object.ID.Type); err != nil {
 		return 0, err
 	}
-	if err := isValidPropertyType(data.Object.Properties[0].Type); err != nil {
+	if err := isValidPropertyType(uint32(data.Object.Properties[0].Type)); err != nil {
 		return 0, err
 	}
 
@@ -52,7 +52,7 @@ func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData
 
 	// Get first property
 	prop := data.Object.Properties[0]
-	e.contextEnumerated(tagPos, prop.Type)
+	e.contextEnumerated(tagPos, uint32(prop.Type))
 	tagPos++
 
 	// Optional Tag - Array Index
@@ -64,7 +64,7 @@ func (e *Encoder) readPropertyHeader(tagPos uint8, data bactype.ReadPropertyData
 }
 
 // ReadProperty is a service request to read a property that is passed.
-func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) error {
+func (e *Encoder) ReadProperty(invokeID uint8, data bactype.PropertyData) error {
 	// PDU Type
 	a := bactype.APDU{
 		DataType:         bactype.ConfirmedServiceRequest,
@@ -75,12 +75,12 @@ func (e *Encoder) ReadProperty(invokeID uint8, data bactype.ReadPropertyData) er
 		SegmentedMessage: false,
 	}
 	e.APDU(a)
-	e.readPropertyHeader(initialTagPos, data)
+	e.readPropertyHeader(initialTagPos, &data)
 	return e.Error()
 }
 
 // ReadPropertyAck is the response made to a ReadProperty service request.
-func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData) error {
+func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.PropertyData) error {
 	if len(data.Object.Properties) != 1 {
 		return fmt.Errorf("Property length length must be 1 not %d", len(data.Object.Properties))
 	}
@@ -95,7 +95,7 @@ func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData)
 	}
 	e.APDU(a)
 
-	tagID, err := e.readPropertyHeader(initialTagPos, data)
+	tagID, err := e.readPropertyHeader(initialTagPos, &data)
 	if err != nil {
 		return err
 	}
@@ -108,7 +108,7 @@ func (e *Encoder) ReadPropertyAck(invokeID uint8, data bactype.ReadPropertyData)
 	return e.Error()
 }
 
-func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
+func (d *Decoder) ReadProperty(data *bactype.PropertyData) error {
 	// Must have at least 7 bytes
 	if d.buff.Len() < 7 {
 		return fmt.Errorf("Missing parameters")
@@ -142,7 +142,7 @@ func (d *Decoder) ReadProperty(data *bactype.ReadPropertyData) error {
 	lenValue := d.value(meta)
 
 	var prop bactype.Property
-	prop.Type = d.enumerated(int(lenValue))
+	prop.Type = bactype.PropertyType(d.enumerated(int(lenValue)))
 
 	if d.len() != 0 {
 		tag, meta = d.tagNumber()

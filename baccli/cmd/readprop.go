@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/alexbeltran/gobacnet"
-	"github.com/alexbeltran/gobacnet/property"
 	"github.com/alexbeltran/gobacnet/types"
 	"github.com/spf13/cobra"
 
@@ -53,7 +52,7 @@ var readpropCmd = &cobra.Command{
 
 func readProp(cmd *cobra.Command, args []string) {
 	if listProperties {
-		property.PrintAll()
+		types.PrintAllProperties()
 		return
 	}
 
@@ -75,15 +74,15 @@ func readProp(cmd *cobra.Command, args []string) {
 
 	dest := resp[0]
 
-	var propInt uint32
+	var propInt types.PropertyType
 	// Check to see if an int was passed
 	if i, err := strconv.Atoi(propertyType); err == nil {
-		propInt = uint32(i)
+		propInt = types.PropertyType(uint32(i))
 	} else {
-		propInt, err = property.Get(propertyType)
+		propInt, err = types.Get(propertyType)
 	}
 
-	if property.IsDeviceProperty(propInt) {
+	if types.IsDeviceProperty(propInt) {
 		objectType = 8
 	}
 
@@ -91,7 +90,7 @@ func readProp(cmd *cobra.Command, args []string) {
 		log.Fatal(err)
 	}
 
-	rp := types.ReadPropertyData{
+	rp := types.PropertyData{
 		Object: types.Object{
 			ID: types.ObjectID{
 				Type:     types.ObjectType(objectType),
@@ -107,8 +106,8 @@ func readProp(cmd *cobra.Command, args []string) {
 	}
 	out, err := c.ReadProperty(dest, rp)
 	if err != nil {
-		if rp.Object.Properties[0].Type == property.ObjectList {
-			log.Error("Note: ObjectList reads may need to be broken up into multiple reads due to length. Read index 0 for array length")
+		if rp.Object.Properties[0].Type == types.PropObjectList {
+			log.Error("Note: PropObjectList reads may need to be broken up into multiple reads due to length. Read index 0 for array length")
 		}
 		log.Fatal(err)
 	}
@@ -121,7 +120,7 @@ func readProp(cmd *cobra.Command, args []string) {
 func init() {
 	// Descriptions are kept separate for legibility purposes.
 	propertyTypeDescr := `type of read that will be done. Support both the
-	property type as an integer or as a string. e.g. ObjectName or 77 are both
+	property type as an integer or as a string. e.g. PropObjectName or 77 are both
 	support. Run --list to see available properties.`
 	listPropertiesDescr := `list all string versions of properties that are
 	support by property flag`
@@ -133,7 +132,7 @@ func init() {
 	readpropCmd.Flags().IntVarP(&objectID, "objectID", "o", 1234, "object ID")
 	readpropCmd.Flags().IntVarP(&objectType, "objectType", "j", 8, "object type")
 	readpropCmd.Flags().StringVarP(&propertyType, "property", "t",
-		property.ObjectNameStr, propertyTypeDescr)
+		types.ObjectNameStr, propertyTypeDescr)
 
 	readpropCmd.Flags().Uint32Var(&arrayIndex, "index", gobacnet.ArrayAll, "Which position to return.")
 

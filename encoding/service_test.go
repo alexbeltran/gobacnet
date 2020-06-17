@@ -51,7 +51,7 @@ func TestReadPropertyService(t *testing.T) {
 	var adr []uint8
 	json.Unmarshal([]byte("\"ChQAzLrA\""), &mac)
 	json.Unmarshal([]byte("\"HQ==\""), &adr)
-	readProp := bactype.ReadPropertyData{
+	readProp := bactype.PropertyData{
 		Object: bactype.Object{
 			ID: bactype.ObjectID{
 				Type:     0,
@@ -112,7 +112,7 @@ func TestReadPropertyResponse(t *testing.T) {
 	apdu := bactype.APDU{}
 	d.APDU(&apdu)
 
-	rpd := bactype.ReadPropertyData{}
+	rpd := bactype.PropertyData{}
 	err := d.ReadProperty(&rpd)
 	if err != nil {
 		t.Fatal(err)
@@ -242,7 +242,7 @@ func TestReadMultiple(t *testing.T) {
 		41, 77, 78, 117, 7, 0, 70, 73, 76, 69, 32, 50, 79, 31}
 	names := []string{"SimpleServer", "FILE 0", "FILE 1", "FILE 2"}
 	dec := NewDecoder(raw)
-	rp := bactype.ReadMultipleProperty{}
+	rp := bactype.MultiplePropertyData{}
 	err := dec.ReadMultiplePropertyAck(&rp)
 	if err != nil {
 		t.Fatal(err)
@@ -272,7 +272,7 @@ func TestReadMultipleTwo(t *testing.T) {
 	names := []string{"SimpleServer", "FILE 0", "FILE 1", "FILE 2"}
 
 	dec := NewDecoder(raw)
-	rp := bactype.ReadMultipleProperty{}
+	rp := bactype.MultiplePropertyData{}
 	err := dec.ReadMultiplePropertyAck(&rp)
 	if err != nil {
 		t.Fatal(err)
@@ -323,7 +323,7 @@ func TestReadMultipleThree(t *testing.T) {
 	var apdu bactype.APDU
 	dec.APDU(&apdu)
 
-	rp := bactype.ReadMultipleProperty{}
+	rp := bactype.MultiplePropertyData{}
 	err := dec.ReadMultiplePropertyAck(&rp)
 	if err != nil {
 		t.Fatalf("failed to decode read multiple: %v", err)

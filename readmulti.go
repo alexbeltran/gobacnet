@@ -42,14 +42,14 @@ import (
 
 const maxReattempt = 2
 
-// ReadMultipleProperty uses the given device and read property request to read
+// ReadMultiProperty uses the given device and read property request to read
 // from a device. Along with being able to read multiple properties from a
 // device, it can also read these properties from multiple objects. This is a
 // good feature to read all present values of every object in the device. This
 // is a batch operation compared to a ReadProperty and should be used in place
 // when reading more than two objects/properties.
-func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
-	var out bactype.ReadMultipleProperty
+func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.MultiplePropertyData) (bactype.MultiplePropertyData, error) {
+	var out bactype.MultiplePropertyData
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -96,8 +96,8 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 	return out, fmt.Errorf("failed %d tries: %v", maxReattempt, err)
 }
 
-func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, request []byte) (bactype.ReadMultipleProperty, error) {
-	var out bactype.ReadMultipleProperty
+func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, request []byte) (bactype.MultiplePropertyData, error) {
+	var out bactype.MultiplePropertyData
 	_, err := c.send(dev.Addr, request)
 	if err != nil {
 		return out, err

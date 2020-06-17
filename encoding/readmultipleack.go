@@ -6,7 +6,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (e *Encoder) ReadMultiplePropertyAck(invokeID uint8, data bactype.ReadMultipleProperty) error {
+func (e *Encoder) ReadMultiplePropertyAck(invokeID uint8, data bactype.MultiplePropertyData) error {
 	a := bactype.APDU{
 		DataType: bactype.ComplexAck,
 		Service:  bactype.ServiceConfirmedReadPropMultiple,
@@ -43,7 +43,7 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 	for _, prop := range properties {
 		// Tag 2 - Property ID
 		tag = 2
-		e.contextEnumerated(tag, prop.Type)
+		e.contextEnumerated(tag, uint32(prop.Type))
 
 		// Tag 3 (OPTIONAL) - Array Length
 		tag++
@@ -63,7 +63,7 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 	return e.Error()
 }
 
-func (d *Decoder) ReadMultiplePropertyAck(data *bactype.ReadMultipleProperty) error {
+func (d *Decoder) ReadMultiplePropertyAck(data *bactype.MultiplePropertyData) error {
 	err := d.objectsWithData(&data.Objects)
 	if err != nil {
 		d.err = err
@@ -137,7 +137,7 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
 			}
 			prop := bactype.Property{}
-			prop.Type = d.enumerated(int(length))
+			prop.Type = bactype.PropertyType(d.enumerated(int(length)))
 
 			// Tag 3 - (Optional) Array Length
 			tag, meta = d.tagNumber()

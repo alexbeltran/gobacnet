@@ -223,14 +223,14 @@ func TestEnumerated(t *testing.T) {
 	}
 }
 
-func compareReadProperties(t *testing.T, rd bactype.ReadPropertyData, outRd bactype.ReadPropertyData) {
+func compareReadProperties(t *testing.T, rd bactype.PropertyData, outRd bactype.PropertyData) {
 	// See if the initial read property data matches the output read property
 	if !reflect.DeepEqual(rd, outRd) {
 		t.Errorf("Mismatch between decrypted values.\nReceived %v\nExpected %v", rd, outRd)
 	}
 }
 
-func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
+func subTestReadProperty(t *testing.T, rd bactype.PropertyData) {
 	e := NewEncoder()
 	e.ReadProperty(10, rd)
 	if err := e.Error(); err != nil {
@@ -246,7 +246,7 @@ func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
 
 	serviceDecoder := NewDecoder(a.RawData)
 
-	var outRd bactype.ReadPropertyData
+	var outRd bactype.PropertyData
 	err := serviceDecoder.ReadProperty(&outRd)
 	if err != nil {
 		t.Fatal(err)
@@ -254,7 +254,7 @@ func subTestReadProperty(t *testing.T, rd bactype.ReadPropertyData) {
 	compareReadProperties(t, rd, outRd)
 }
 
-func subTestReadPropertyAck(t *testing.T, rd bactype.ReadPropertyData) {
+func subTestReadPropertyAck(t *testing.T, rd bactype.PropertyData) {
 	e := NewEncoder()
 	e.ReadPropertyAck(10, rd)
 	if err := e.Error(); err != nil {
@@ -267,7 +267,7 @@ func subTestReadPropertyAck(t *testing.T, rd bactype.ReadPropertyData) {
 	// Read Property reads 4 extra fields that are not original encoded. Need to
 	//find out where these 4 fields come from
 	d.buff.Read(make([]uint8, 3))
-	var outRd bactype.ReadPropertyData
+	var outRd bactype.PropertyData
 	err := d.ReadProperty(&outRd)
 	if err != nil {
 		t.Fatalf("Decoding: %s", err)
@@ -277,7 +277,7 @@ func subTestReadPropertyAck(t *testing.T, rd bactype.ReadPropertyData) {
 
 func TestReadAckProperty(t *testing.T) {
 	data := "Hello world!"
-	rd := bactype.ReadPropertyData{
+	rd := bactype.PropertyData{
 		Object: bactype.Object{
 			ID: bactype.ObjectID{
 				Type:     37,
@@ -301,7 +301,7 @@ func TestReadAckProperty(t *testing.T) {
 }
 
 func TestReadProperty(t *testing.T) {
-	rd := bactype.ReadPropertyData{
+	rd := bactype.PropertyData{
 		Object: bactype.Object{
 			ID: bactype.ObjectID{
 				Type:     37,
@@ -331,7 +331,7 @@ func TestReadPropertyTooSmall(t *testing.T) {
 	e.write(garbage)
 	d := NewDecoder(e.Bytes())
 
-	var out bactype.ReadPropertyData
+	var out bactype.PropertyData
 	err := d.ReadProperty(&out)
 	if err == nil {
 		t.Fatal("Missed too small error")
@@ -351,7 +351,7 @@ func TestReadPropertyMismatch(t *testing.T) {
 	}
 	d := NewDecoder(e.Bytes())
 
-	var out bactype.ReadPropertyData
+	var out bactype.PropertyData
 	err := d.ReadProperty(&out)
 	if err == nil {
 		t.Fatal("Incorrect tag number was allowed to pass")

@@ -21,7 +21,6 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/alexbeltran/gobacnet"
-	"github.com/alexbeltran/gobacnet/property"
 	"github.com/alexbeltran/gobacnet/types"
 	"github.com/spf13/cobra"
 )
@@ -41,7 +40,7 @@ to quickly create a Cobra application.`,
 
 func readMulti(cmd *cobra.Command, args []string) {
 	if listProperties {
-		property.PrintAll()
+		types.PrintAllProperties()
 		return
 	}
 	c, err := gobacnet.NewClient(viper.GetString("interface"), viper.GetInt("port"))
@@ -59,7 +58,7 @@ func readMulti(cmd *cobra.Command, args []string) {
 	for _, d := range resp {
 		dest := d
 
-		rp := types.ReadPropertyData{
+		rp := types.PropertyData{
 			Object: types.Object{
 				ID: types.ObjectID{
 					Type:     8,
@@ -67,7 +66,7 @@ func readMulti(cmd *cobra.Command, args []string) {
 				},
 				Properties: []types.Property{
 					types.Property{
-						Type:       property.ObjectList,
+						Type:       types.PropObjectList,
 						ArrayIndex: gobacnet.ArrayAll,
 					},
 				},
@@ -85,7 +84,7 @@ func readMulti(cmd *cobra.Command, args []string) {
 			return
 		}
 
-		rpm := types.ReadMultipleProperty{}
+		rpm := types.MultiplePropertyData{}
 		rpm.Objects = make([]types.Object, len(ids))
 		for i, raw_id := range ids {
 			id, ok := raw_id.(types.ObjectID)
@@ -97,11 +96,11 @@ func readMulti(cmd *cobra.Command, args []string) {
 
 			rpm.Objects[i].Properties = []types.Property{
 				types.Property{
-					Type:       property.ObjectName,
+					Type:       types.PropObjectName,
 					ArrayIndex: gobacnet.ArrayAll,
 				},
 				types.Property{
-					Type:       property.Description,
+					Type:       types.PropDescription,
 					ArrayIndex: gobacnet.ArrayAll,
 				},
 			}
