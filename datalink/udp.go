@@ -70,7 +70,7 @@ func NewUDPDataLink(inter string, port int) (DataLink, error) {
 	return &udpDataLink{
 		listener:         conn,
 		myAddress:        types.IPPortToAddress(ip, port),
-		broadcastAddress: types.IPPortToAddress(broadcast, port),
+		broadcastAddress: types.IPPortToAddress(broadcast, DefaultPort),
 	}, nil
 }
 

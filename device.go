@@ -58,6 +58,9 @@ type Client struct {
 // NewClient creates a new client with the given interface and
 // port.
 func NewClient(dataLink datalink.DataLink) *Client {
+	log := logrus.New()
+	log.Formatter = &logrus.TextFormatter{}
+	log.SetLevel(logrus.InfoLevel)
 	return &Client{
 		dataLink: dataLink,
 		tsm:      tsm.New(defaultStateSize),
@@ -65,6 +68,7 @@ func NewClient(dataLink datalink.DataLink) *Client {
 			utsm.DefaultSubscriberTimeout(time.Second*time.Duration(10)),
 			utsm.DefaultSubscriberLastReceivedTimeout(time.Second*time.Duration(2)),
 		),
+		log: log,
 	}
 }
 
