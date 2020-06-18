@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/alexbeltran/gobacnet/types"
 	"net"
+	"sync"
 )
 
 // DefaultPort that BacnetIP will use if a port is not given. Valid ports for
@@ -15,6 +16,7 @@ type udpDataLink struct {
 	myAddress, broadcastAddress *types.Address
 	port                        int
 	listener                    *net.UDPConn
+	readBufferPool              sync.Pool
 }
 
 func NewUDPDataLink(inter string, port int) (DataLink, error) {
@@ -71,6 +73,9 @@ func NewUDPDataLink(inter string, port int) (DataLink, error) {
 		listener:         conn,
 		myAddress:        IPPortToAddress(ip, port),
 		broadcastAddress: IPPortToAddress(broadcast, DefaultPort),
+		readBufferPool: sync.Pool{New: func() interface{} {
+			return make([]byte, 2048)
+		}},
 	}, nil
 }
 
@@ -91,8 +96,7 @@ func (c *udpDataLink) Run(handler MessageHandler) {
 			adr *net.UDPAddr
 			i   int
 		)
-
-		b := make([]byte, 2048)
+		b := c.readBufferPool.Get().([]byte)
 		i, adr, err = c.listener.ReadFromUDP(b)
 		if err != nil {
 			continue
