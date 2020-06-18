@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"fmt"
+	"github.com/alexbeltran/gobacnet/datalink"
 	"strconv"
 
 	"github.com/spf13/viper"
@@ -56,11 +57,13 @@ func readProp(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	c, err := gobacnet.NewClient(viper.GetString("interface"), viper.GetInt("port"))
+	dataLink, err := datalink.NewUDPDataLink(viper.GetString("interface"), viper.GetInt("port"))
 	if err != nil {
 		log.Fatal(err)
 	}
+	c := gobacnet.NewClient(dataLink)
 	defer c.Close()
+	go c.Run()
 
 	// We need the actual address of the device first.
 	resp, err := c.WhoIs(deviceID, deviceID)

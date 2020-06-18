@@ -18,17 +18,11 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) err
 	}
 	defer c.tsm.Put(id)
 
-	udp, err := c.localUDPAddress()
-	if err != nil {
-		return err
-	}
-	src := bactype.UDPToAddress(udp)
-
 	enc := encoding.NewEncoder()
 	enc.NPDU(bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dest.Addr,
-		Source:                &src,
+		Source:                c.dataLink.GetMyAddress(),
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
@@ -45,7 +39,7 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) err
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
 		var raw interface{}
-		_, err = c.send(dest.Addr, enc.Bytes())
+		_, err = c.Send(dest.Addr, enc.Bytes())
 		if err != nil {
 			continue
 		}

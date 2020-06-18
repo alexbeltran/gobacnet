@@ -59,17 +59,11 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.MultipleProper
 	}
 	defer c.tsm.Put(id)
 
-	udp, err := c.localUDPAddress()
-	if err != nil {
-		return out, err
-	}
-	src := bactype.UDPToAddress(udp)
-
 	enc := encoding.NewEncoder()
 	enc.NPDU(bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dev.Addr,
-		Source:                &src,
+		Source:                c.dataLink.GetMyAddress(),
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
@@ -98,7 +92,7 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.MultipleProper
 
 func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, request []byte) (bactype.MultiplePropertyData, error) {
 	var out bactype.MultiplePropertyData
-	_, err := c.send(dev.Addr, request)
+	_, err := c.Send(dev.Addr, request)
 	if err != nil {
 		return out, err
 	}

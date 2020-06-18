@@ -92,9 +92,17 @@ func (a *Address) UDPAddr() (net.UDPAddr, error) {
 	}, nil
 }
 
-// Address converts a given udp address into a bacnet address
-func UDPToAddress(n *net.UDPAddr) Address {
-	a := Address{}
+// IPPortToAddress converts a given udp address into a bacnet address
+func IPPortToAddress(ip net.IP, port int) *Address {
+	return UDPToAddress(&net.UDPAddr{
+		IP:   ip.To4(),
+		Port: port,
+	})
+}
+
+// UDPToAddress converts a given udp address into a bacnet address
+func UDPToAddress(n *net.UDPAddr) *Address {
+	a := &Address{}
 	p := uint16(n.Port)
 
 	// Length of IP plus the port

@@ -16,6 +16,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/alexbeltran/gobacnet/datalink"
 	"os"
 	"sync"
 	"time"
@@ -64,11 +65,13 @@ func discover(cmd *cobra.Command, args []string) {
 	log.Out = os.Stdout
 	log.SetLevel(logrus.DebugLevel)
 
-	c, err := gobacnet.NewClient(Interface, Port)
+	dataLink, err := datalink.NewUDPDataLink(Interface, Port)
 	if err != nil {
 		log.Fatal(err)
 	}
+	c := gobacnet.NewClient(dataLink)
 	defer c.Close()
+	go c.Run()
 
 	log.Printf("Discovering on interface %s and port %d", Interface, Port)
 	start := time.Now()

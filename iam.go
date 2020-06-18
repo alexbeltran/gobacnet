@@ -19,6 +19,6 @@ func (c *Client) iAm(dest bactype.Address) error {
 
 	//	iams := []bactype.ObjectID{bactype.ObjectID{Instance: 1, Type: 5}}
 	//	enc.IAm(iams)
-	_, err := c.send(dest, enc.Bytes())
+	_, err := c.Send(dest, enc.Bytes())
 	return err
 }

@@ -51,17 +51,11 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bac
 	}
 	defer c.tsm.Put(id)
 
-	udp, err := c.localUDPAddress()
-	if err != nil {
-		return bactype.PropertyData{}, err
-	}
-	src := bactype.UDPToAddress(udp)
-
 	enc := encoding.NewEncoder()
 	enc.NPDU(bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dest.Addr,
-		Source:                &src,
+		Source:                c.dataLink.GetMyAddress(),
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
@@ -78,7 +72,7 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bac
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
 		var out bactype.PropertyData
-		_, err = c.send(dest.Addr, enc.Bytes())
+		_, err = c.Send(dest.Addr, enc.Bytes())
 		if err != nil {
 			log.Print(err)
 			continue

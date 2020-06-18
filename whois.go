@@ -32,8 +32,6 @@ License.
 package gobacnet
 
 import (
-	"net"
-
 	"github.com/alexbeltran/gobacnet/encoding"
 	"github.com/alexbeltran/gobacnet/types"
 )
@@ -43,11 +41,7 @@ import (
 // Using ArrayAll is highly discouraged for most networks since it can lead
 // to a high congested network.
 func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
-	dest := types.UDPToAddress(&net.UDPAddr{
-		IP:   c.broadcastAddress,
-		Port: DefaultPort,
-	})
-	src, _ := c.localAddress()
+	dest := *c.dataLink.GetBroadcastAddress()
 
 	dest.SetBroadcast(true)
 
@@ -55,7 +49,7 @@ func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 	npdu := types.NPDU{
 		Version:               types.ProtocolVersion,
 		Destination:           &dest,
-		Source:                &src,
+		Source:                c.dataLink.GetMyAddress(),
 		IsNetworkLayerMessage: false,
 
 		// We are not expecting a direct reply from a single destination
@@ -83,7 +77,7 @@ func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 	// Run in parallel
 	errChan := make(chan error)
 	go func() {
-		_, err = c.send(dest, enc.Bytes())
+		_, err = c.Send(dest, enc.Bytes())
 		errChan <- err
 	}()
 	values, err := c.utsm.Subscribe(start, end)
