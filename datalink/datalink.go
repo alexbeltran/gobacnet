@@ -1,13 +1,13 @@
 package datalink
 
-import "github.com/alexbeltran/gobacnet/types"
-
-type MessageHandler func(src *types.Address, data []byte)
+import (
+	"github.com/alexbeltran/gobacnet/types"
+)
 
 type DataLink interface {
 	GetMyAddress() *types.Address
 	GetBroadcastAddress() *types.Address
-	Run(handler MessageHandler)
 	Send(data []byte, dest *types.Address) (int, error)
+	Receive(data []byte) (*types.Address, int, error)
 	Close() error
 }

@@ -37,6 +37,7 @@ import (
 	"github.com/alexbeltran/gobacnet/encoding"
 	bactype "github.com/alexbeltran/gobacnet/types"
 	"io"
+	"sync"
 	"time"
 
 	"github.com/alexbeltran/gobacnet/tsm"
@@ -49,15 +50,19 @@ const defaultStateSize = 20
 const forwardHeaderLength = 10
 
 type Client struct {
-	dataLink datalink.DataLink
-	tsm      *tsm.TSM
-	utsm     *utsm.Manager
-	log      *logrus.Logger
+	dataLink       datalink.DataLink
+	tsm            *tsm.TSM
+	utsm           *utsm.Manager
+	readBufferPool sync.Pool
+	log            *logrus.Logger
 }
 
 // NewClient creates a new client with the given interface and
 // port.
-func NewClient(dataLink datalink.DataLink) *Client {
+func NewClient(dataLink datalink.DataLink, maxPDU uint16) *Client {
+	if maxPDU == 0 {
+		maxPDU = bactype.MaxAPDU
+	}
 	log := logrus.New()
 	log.Formatter = &logrus.TextFormatter{}
 	log.SetLevel(logrus.InfoLevel)
@@ -68,12 +73,25 @@ func NewClient(dataLink datalink.DataLink) *Client {
 			utsm.DefaultSubscriberTimeout(time.Second*time.Duration(10)),
 			utsm.DefaultSubscriberLastReceivedTimeout(time.Second*time.Duration(2)),
 		),
+		readBufferPool: sync.Pool{New: func() interface{} {
+			return make([]byte, maxPDU)
+		}},
 		log: log,
 	}
 }
 
 func (c *Client) Run() {
-	c.dataLink.Run(c.handleMsg)
+	var err error = nil
+	for err == nil {
+		b := c.readBufferPool.Get().([]byte)
+		var addr *bactype.Address
+		var n int
+		addr, n, err = c.dataLink.Receive(b)
+		if err != nil {
+			continue
+		}
+		go c.handleMsg(addr, b[:n])
+	}
 }
 
 func (c *Client) handleMsg(src *bactype.Address, b []byte) {

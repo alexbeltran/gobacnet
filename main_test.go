@@ -33,6 +33,7 @@ package gobacnet
 
 import (
 	"encoding/json"
+	"github.com/alexbeltran/gobacnet/datalink"
 	"log"
 	"testing"
 
@@ -43,39 +44,17 @@ const interfaceName = "eth0"
 const testServer = 1234
 
 // TestMain are general test
-func TestMain(t *testing.T) {
-	c, err := NewClient(interfaceName, DefaultPort)
+func TestUdpDataLink(t *testing.T) {
+	dataLink, err := datalink.NewUDPDataLink(interfaceName, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
+	c := NewClient(dataLink, 0)
 	c.Close()
 
-	d, err := NewClient("pizzainterfacenotreal", DefaultPort)
-	d.Close()
+	_, err = datalink.NewUDPDataLink("pizzainterfacenotreal", 0)
 	if err == nil {
 		t.Fatal("Successfully passed a false interface.")
-	}
-}
-func TestGetBroadcast(t *testing.T) {
-	failTest := func(addr string) {
-		_, err := getBroadcast(addr)
-		if err == nil {
-			t.Fatalf("%s is not a valid parameter, but it did not gracefully crash", addr)
-		}
-	}
-
-	failTest("frog")
-	failTest("frog/dog")
-	failTest("frog/24")
-	failTest("16.18.dog/32")
-
-	s, err := getBroadcast("192.168.23.1/24")
-	if err != nil {
-		t.Fatal(err)
-	}
-	correct := "192.168.23.255"
-	if s.String() != correct {
-		t.Fatalf("%s is incorrect. It should be %s", s.String(), correct)
 	}
 }
 
@@ -88,10 +67,11 @@ func TestMac(t *testing.T) {
 }
 
 func TestServices(t *testing.T) {
-	c, err := NewClient(interfaceName, DefaultPort)
+	dataLink, err := datalink.NewUDPDataLink(interfaceName, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
+	c := NewClient(dataLink, 0)
 	defer c.Close()
 
 	t.Run("Read Property", func(t *testing.T) {

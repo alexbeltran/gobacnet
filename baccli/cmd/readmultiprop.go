@@ -48,7 +48,7 @@ func readMulti(cmd *cobra.Command, args []string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	c := gobacnet.NewClient(dataLink)
+	c := gobacnet.NewClient(dataLink, 0)
 	defer c.Close()
 	go c.Run()
 

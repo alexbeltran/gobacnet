@@ -2,9 +2,9 @@ package datalink
 
 import (
 	"fmt"
-	"github.com/alexbeltran/gobacnet/types"
 	"net"
-	"sync"
+
+	"github.com/alexbeltran/gobacnet/types"
 )
 
 // DefaultPort that BacnetIP will use if a port is not given. Valid ports for
@@ -16,7 +16,6 @@ type udpDataLink struct {
 	myAddress, broadcastAddress *types.Address
 	port                        int
 	listener                    *net.UDPConn
-	readBufferPool              sync.Pool
 }
 
 func NewUDPDataLink(inter string, port int) (DataLink, error) {
@@ -73,9 +72,6 @@ func NewUDPDataLink(inter string, port int) (DataLink, error) {
 		listener:         conn,
 		myAddress:        IPPortToAddress(ip, port),
 		broadcastAddress: IPPortToAddress(broadcast, DefaultPort),
-		readBufferPool: sync.Pool{New: func() interface{} {
-			return make([]byte, 2048)
-		}},
 	}, nil
 }
 
@@ -86,24 +82,13 @@ func (c *udpDataLink) Close() error {
 	return nil
 }
 
-// listen for incoming bacnet packets.
-func (c *udpDataLink) Run(handler MessageHandler) {
-	var err error = nil
-
-	// While connection is opened
-	for err == nil {
-		var (
-			adr *net.UDPAddr
-			i   int
-		)
-		b := c.readBufferPool.Get().([]byte)
-		i, adr, err = c.listener.ReadFromUDP(b)
-		if err != nil {
-			continue
-		}
-		adr.IP = adr.IP.To4()
-		go handler(UDPToAddress(adr), b[:i])
+func (c *udpDataLink) Receive(data []byte) (*types.Address, int, error) {
+	n, adr, err := c.listener.ReadFromUDP(data)
+	if err != nil {
+		return nil, n, err
 	}
+	adr.IP = adr.IP.To4()
+	return UDPToAddress(adr), n, nil
 }
 
 func (c *udpDataLink) GetMyAddress() *types.Address {
