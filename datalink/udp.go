@@ -69,8 +69,8 @@ func NewUDPDataLink(inter string, port int) (DataLink, error) {
 
 	return &udpDataLink{
 		listener:         conn,
-		myAddress:        types.IPPortToAddress(ip, port),
-		broadcastAddress: types.IPPortToAddress(broadcast, DefaultPort),
+		myAddress:        IPPortToAddress(ip, port),
+		broadcastAddress: IPPortToAddress(broadcast, DefaultPort),
 	}, nil
 }
 
@@ -98,7 +98,7 @@ func (c *udpDataLink) Run(handler MessageHandler) {
 			continue
 		}
 		adr.IP = adr.IP.To4()
-		go handler(types.UDPToAddress(adr), b[:i])
+		go handler(UDPToAddress(adr), b[:i])
 	}
 }
 
@@ -118,4 +118,33 @@ func (c *udpDataLink) Send(data []byte, dest *types.Address) (int, error) {
 		return 0, err
 	}
 	return c.listener.WriteTo(data, &d)
+}
+
+// IPPortToAddress converts a given udp address into a bacnet address
+func IPPortToAddress(ip net.IP, port int) *types.Address {
+	return UDPToAddress(&net.UDPAddr{
+		IP:   ip.To4(),
+		Port: port,
+	})
+}
+
+// UDPToAddress converts a given udp address into a bacnet address
+func UDPToAddress(n *net.UDPAddr) *types.Address {
+	a := &types.Address{}
+	p := uint16(n.Port)
+
+	// Length of IP plus the port
+	length := net.IPv4len + 2
+	a.Mac = make([]uint8, length)
+	//Encode ip
+	for i := 0; i < net.IPv4len; i++ {
+		a.Mac[i] = n.IP[i]
+	}
+
+	// Encode port
+	a.Mac[net.IPv4len+0] = uint8(p >> 8)
+	a.Mac[net.IPv4len+1] = uint8(p & 0x00FF)
+
+	a.MacLen = uint8(length)
+	return a
 }
