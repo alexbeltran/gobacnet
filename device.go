@@ -124,7 +124,7 @@ func (c *Client) handleMsg(src *bactype.Address, b []byte) {
 		send := dec.Bytes()
 		err = dec.APDU(&apdu)
 		if err != nil {
-			c.log.Error("Issue decoding APDU: %v", err)
+			c.log.Errorf("Issue decoding APDU: %v", err)
 			return
 		}
 
@@ -174,7 +174,7 @@ func (c *Client) handleMsg(src *bactype.Address, b []byte) {
 			err := fmt.Errorf("error class %d code %d", apdu.Error.Class, apdu.Error.Code)
 			err = c.tsm.Send(int(apdu.InvokeId), err)
 			if err != nil {
-				c.log.Debug("unable to Send error to %d: %v", apdu.InvokeId, err)
+				c.log.Debugf("unable to Send error to %d: %v", apdu.InvokeId, err)
 			}
 		default:
 			// Ignore it

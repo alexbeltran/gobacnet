@@ -34,16 +34,13 @@ package encoding
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
 // Decoder used
 type Decoder struct {
-	buff       *bytes.Buffer
-	err        error
-	tagCounter int
+	buff *bytes.Buffer
+	err  error
 }
 
 func (d *Decoder) len() int {
@@ -53,7 +50,6 @@ func NewDecoder(b []byte) *Decoder {
 	return &Decoder{
 		bytes.NewBuffer(b),
 		nil,
-		0,
 	}
 }
 
@@ -65,21 +61,20 @@ func (d *Decoder) Bytes() []byte {
 	return d.buff.Bytes()
 }
 
+func (d *Decoder) ReadByte() (byte, error) {
+	return d.buff.ReadByte()
+}
+
+func (d *Decoder) UnreadByte() error {
+	return d.buff.UnreadByte()
+}
+
 func (d *Decoder) decode(data interface{}) {
 	// Only decode if there have been no errors so far
 	if d.err != nil {
 		return
 	}
 	d.err = binary.Read(d.buff, EncodingEndian, data)
-}
-func (d *Decoder) tagCheck(inTag uint8) {
-	if d.tagCounter != int(inTag) {
-		d.err = fmt.Errorf("Mismatch in tag id. Tag ID should be %d but is %d", d.tagCounter, inTag)
-	}
-}
-
-func (d *Decoder) tagIncr() {
-	d.tagCounter++
 }
 
 // contexTag decoder
@@ -220,6 +215,7 @@ func (d *Decoder) bitString(length int) *bactype.BitString {
 	bytesUsed := uint8(length - 1)
 	if bytesUsed <= bactype.MaxBitStringBytes {
 		for i := uint8(0); i < bytesUsed; i++ {
+			//why reverse bits??
 			bs.SetByte(i, byteReverseBits(data[i+1]))
 		}
 		bs.SetBitsUsed(bytesUsed, data[0]&0x07)

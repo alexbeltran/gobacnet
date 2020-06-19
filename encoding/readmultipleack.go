@@ -155,48 +155,58 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 
 			// Tag 4 - Opening Tag
 			expectedTag = 4
-			if tag != expectedTag {
-				if tag == 5 {
-					var class, code uint32
-					err := d.bacError(&class, &code)
-					if err != nil {
-						return err
+			if tag == expectedTag && meta.isOpening() {
+				var array []interface{}
+				tag, meta = d.tagNumber()
+				_ = d.UnreadByte()
+				for {
+					if meta.isContextSpecific() {
+						tag, meta = d.tagNumber()
+						if d.err != nil {
+							return d.err
+						}
+						if !meta.isClosing() {
+							//TODO to be done
+							*objects = append(*objects, obj)
+							return nil
+						}
+					} else {
+						data, err := d.AppData()
+						if err != nil {
+							return err
+						}
+						array = append(array, data)
 					}
-					return fmt.Errorf("Class %d Code %d", class, code)
+					tag, meta = d.tagNumber()
+					if tag == expectedTag && meta.isClosing() {
+						//
+						break
+					} else {
+						_ = d.UnreadByte()
+					}
 				}
-				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-			}
-			if !meta.isOpening() {
-				return &ErrorWrongTagType{OpeningTag}
-			}
-			data, err := d.AppData()
-			if err != nil {
-				return err
-			}
-			prop.Data = data
-			obj.Properties = append(obj.Properties, prop)
+				if len(array) == 1 {
+					prop.Data = array[0]
+				} else {
+					prop.Data = array
+				}
+				obj.Properties = append(obj.Properties, prop)
 
-			tag, meta = d.tagNumber()
-			expectedTag = 4
-			if tag != expectedTag {
-				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-			}
-			if !meta.isClosing() {
-				return &ErrorWrongTagType{ClosingTag}
-			}
-
-			tag, meta, length = d.tagNumberAndValue()
-			// Tag 5 - (Optional) Error Code
-			expectedTag = 5
-			if tag == expectedTag {
-				// We have an error
-				if !meta.isOpening() {
-					return &ErrorWrongTagType{OpeningTag}
+				tag, meta = d.tagNumber()
+			} else if tag == expectedTag+1 && meta.isOpening() {
+				//Tag 5 error
+				var class, code uint32
+				err := d.bacError(&class, &code)
+				if err != nil {
+					return err
 				}
 				tag, meta = d.tagNumber()
-				if !meta.isClosing() {
-					return &ErrorWrongTagType{ClosingTag}
+				if tag == expectedTag+1 && meta.isClosing() {
+					//
 				}
+				return fmt.Errorf("Class %d Code %d", class, code)
+			} else {
+				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
 			}
 		}
 		*objects = append(*objects, obj)

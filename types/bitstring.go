@@ -1,5 +1,7 @@
 package types
 
+import "encoding/json"
+
 const MaxBitStringBytes = 15
 
 type BitString struct {
@@ -15,6 +17,23 @@ func NewBitString(bufferSize int) *BitString {
 		bitUsed: 0,
 		value:   make([]byte, bufferSize),
 	}
+}
+
+func (bs *BitString) Value() []bool {
+	value := make([]bool, bs.bitUsed)
+	for i := uint8(0); i <= bs.bitUsed; i++ {
+		if bs.Bit(i) {
+			value[i] = true
+		} else {
+			value[i] = false
+		}
+	}
+	return value
+}
+
+func (bs *BitString) String() string {
+	bin, _ := json.Marshal(bs.Value())
+	return string(bin)
 }
 
 func (bs *BitString) SetBit(bitNumber uint8, value bool) {
