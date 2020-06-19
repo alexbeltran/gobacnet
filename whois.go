@@ -43,8 +43,6 @@ import (
 func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 	dest := *c.dataLink.GetBroadcastAddress()
 
-	dest.SetBroadcast(true)
-
 	enc := encoding.NewEncoder()
 	npdu := types.NPDU{
 		Version:               types.ProtocolVersion,
