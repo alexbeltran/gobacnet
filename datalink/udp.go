@@ -133,5 +133,7 @@ func UDPToAddress(n *net.UDPAddr) *types.Address {
 	// Encode port
 	a.Mac[net.IPv4len+0] = uint8(p >> 8)
 	a.Mac[net.IPv4len+1] = uint8(p & 0x00FF)
+
+	a.MacLen = uint8(length)
 	return a
 }
