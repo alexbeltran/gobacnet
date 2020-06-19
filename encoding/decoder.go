@@ -208,3 +208,21 @@ func (d *Decoder) signed(length int) int32 {
 		return 0
 	}
 }
+
+func (d *Decoder) bitString(length int) *bactype.BitString {
+	if length <= 0 {
+		return nil
+	}
+	data := make([]uint8, length)
+	d.decode(data)
+	bs := bactype.NewBitString(length - 1)
+	/* the first octet contains the unused bits */
+	bytesUsed := uint8(length - 1)
+	if bytesUsed <= bactype.MaxBitStringBytes {
+		for i := uint8(0); i < bytesUsed; i++ {
+			bs.SetByte(i, byteReverseBits(data[i+1]))
+		}
+		bs.SetBitsUsed(bytesUsed, data[0]&0x07)
+	}
+	return bs
+}

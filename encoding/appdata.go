@@ -276,7 +276,7 @@ func (d *Decoder) AppData() (interface{}, error) {
 		err := d.string(&s, len-1)
 		return s, err
 	case tagBitString:
-		return nil, fmt.Errorf("decoding bit strings is currently unsupported")
+		return d.bitString(len), d.Error()
 	case tagEnumerated:
 		return d.enumerated(len), d.Error()
 	case tagDate:
