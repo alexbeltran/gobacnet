@@ -67,11 +67,9 @@ func TestReadPropertyService(t *testing.T) {
 	}
 
 	dest := bactype.Address{
-		Net:    2428,
-		Mac:    mac,
-		MacLen: 6,
-		Len:    1,
-		Adr:    adr,
+		Net: 2428,
+		Mac: mac,
+		Adr: adr,
 	}
 	e.NPDU(bactype.NPDU{
 		Version:               bactype.ProtocolVersion,

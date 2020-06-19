@@ -36,19 +36,21 @@ import (
 	"net"
 )
 
+const MaxMacLen = 6
+
 type Address struct {
-	Net    uint16
-	Len    uint8
-	MacLen uint8
-	Mac    []uint8
-	Adr    []uint8
+	Net uint16
+	//	Len    uint8
+	//	MacLen uint8
+	Mac []uint8
+	Adr []uint8
 }
 
 const broadcastNetwork uint16 = 0xFFFF
 
 // IsBroadcast returns if the address is a broadcast address
 func (a *Address) IsBroadcast() bool {
-	if a.Net == broadcastNetwork || a.MacLen == 0 {
+	if a.Net == broadcastNetwork || len(a.Mac) == 0 {
 		return true
 	}
 	return false
@@ -56,16 +58,14 @@ func (a *Address) IsBroadcast() bool {
 
 func (a *Address) SetBroadcast(b bool) {
 	if b {
-		a.MacLen = 0
-	} else {
-		a.MacLen = uint8(len(a.Mac))
+		a.Mac = nil
 	}
 }
 
 // IsSubBroadcast checks to see if packet is meant to be a network
 // specific broadcast
 func (a *Address) IsSubBroadcast() bool {
-	if a.Net > 0 && a.Len == 0 {
+	if a.Net > 0 && len(a.Adr) == 0 {
 		return true
 	}
 	return false
@@ -73,7 +73,7 @@ func (a *Address) IsSubBroadcast() bool {
 
 // IsUnicast checks to see if packet is meant to be a unicast
 func (a *Address) IsUnicast() bool {
-	if a.MacLen == 6 {
+	if len(a.Mac) == 6 {
 		return true
 	}
 	return false
@@ -85,7 +85,7 @@ func (a *Address) UDPAddr() (net.UDPAddr, error) {
 		return net.UDPAddr{}, fmt.Errorf("Mac is too short at %d", len(a.Mac))
 	}
 	port := uint(a.Mac[4])<<8 | uint(a.Mac[5])
-	ip := net.IPv4(byte(a.Mac[0]), byte(a.Mac[1]), byte(a.Mac[2]), byte(a.Mac[3]))
+	ip := net.IPv4(a.Mac[0], a.Mac[1], a.Mac[2], a.Mac[3])
 	return net.UDPAddr{
 		IP:   ip,
 		Port: int(port),

@@ -91,7 +91,6 @@ func TestNPDU(t *testing.T) {
 	n.Destination = &bactype.Address{
 		Net: 314,
 		Adr: []uint8{91, 4, 5, 6},
-		Len: 4,
 	}
 	n.HopCount = 21
 	t.Run("Testing Destination Address", subTestNPDU(t, n))
@@ -100,7 +99,6 @@ func TestNPDU(t *testing.T) {
 	n.Source = &bactype.Address{
 		Net: 444,
 		Adr: []uint8{1, 9, 6, 10},
-		Len: 4,
 	}
 	t.Run("Testing Dest and Src Address", subTestNPDU(t, n))
 

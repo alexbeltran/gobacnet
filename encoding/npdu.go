@@ -64,7 +64,7 @@ func (e *Encoder) NPDU(n bactype.NPDU) {
 		e.write(n.Destination.Net)
 
 		// Address
-		e.write(n.Destination.Len)
+		e.write(len(n.Destination.Adr))
 		e.write(n.Destination.Adr)
 	}
 
@@ -72,7 +72,7 @@ func (e *Encoder) NPDU(n bactype.NPDU) {
 		e.write(n.Source.Net)
 
 		// Address
-		e.write(n.Source.Len)
+		e.write(len(n.Source.Adr))
 		e.write(n.Source.Adr)
 	}
 
@@ -93,10 +93,11 @@ func (e *Encoder) NPDU(n bactype.NPDU) {
 
 func (d *Decoder) Address(a *bactype.Address) {
 	d.decode(&a.Net)
-	d.decode(&a.Len)
+	n := uint8(0)
+	d.decode(&n)
 
 	// Make space for address
-	a.Adr = make([]uint8, a.Len)
+	a.Adr = make([]uint8, n)
 	d.decode(a.Adr)
 }
 
