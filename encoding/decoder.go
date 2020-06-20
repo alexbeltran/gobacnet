@@ -69,6 +69,11 @@ func (d *Decoder) Read(data []byte) (int, error) {
 	return d.buff.Read(data)
 }
 
+func (d *Decoder) Skip(n uint32) error {
+	_, d.err = d.buff.Read(make([]byte, n))
+	return d.err
+}
+
 func (d *Decoder) UnreadByte() error {
 	return d.buff.UnreadByte()
 }

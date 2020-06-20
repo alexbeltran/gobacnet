@@ -164,18 +164,19 @@ func (e *Encoder) time(t bactype.Time) {
 	// Stored as 1/100 of a second
 	e.write(uint8(t.Millisecond / 10))
 }
-func (d *Decoder) time(t *bactype.Time) {
-	var hour, min, sec, centisec uint8
-	d.decode(&hour)
-	d.decode(&min)
-	d.decode(&sec)
-	// Yeah, they report centisecs instead of milliseconds.
-	d.decode(&centisec)
+func (d *Decoder) time(t *bactype.Time, length int) {
+	if length <= 0 {
+		return
+	}
+	data := make([]byte, length)
+	if _, d.err = d.Read(data); d.err != nil {
+		return
+	}
 
-	t.Hour = int(hour)
-	t.Minute = int(min)
-	t.Second = int(sec)
-	t.Millisecond = int(centisec) * 10
+	t.Hour = int(data[0])
+	t.Minute = int(data[1])
+	t.Second = int(data[2])
+	t.Millisecond = int(data[3]) * 10
 
 }
 
@@ -292,7 +293,7 @@ func (d *Decoder) AppDataOfTag(tag uint8, len int) (interface{}, error) {
 		return date, d.Error()
 	case tagTime:
 		var t bactype.Time
-		d.time(&t)
+		d.time(&t, len)
 		return t, d.Error()
 	case tagObjectID:
 		objType, objInstance := d.objectId()

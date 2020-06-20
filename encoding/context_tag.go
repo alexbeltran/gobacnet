@@ -10,8 +10,7 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 	case types.PROP_REQUESTED_SHED_LEVEL:
 	case types.PROP_EXPECTED_SHED_LEVEL:
 		switch tagNumber {
-		case 0:
-		case 1:
+		case 0, 1:
 			tag = tagUint
 			break
 		case 2:
@@ -23,20 +22,16 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 		break
 	case types.PROP_ACTION:
 		switch tagNumber {
-		case 0:
-		case 1:
+		case 0, 1:
 			tag = tagObjectID
 			break
 		case 2:
 			tag = tagEnumerated
 			break
-		case 3:
-		case 5:
-		case 6:
+		case 3, 5, 6:
 			tag = tagUint
 			break
-		case 7:
-		case 8:
+		case 7, 8:
 			tag = tagBool
 			break
 		case 4: /* propertyValue: abstract syntax */
@@ -71,6 +66,7 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 	case types.PROP_LOG_DEVICE_OBJECT_PROPERTY:
 		switch tagNumber {
 		case 0: /* Object ID */
+			fallthrough
 		case 3: /* Device ID */
 			tag = tagObjectID
 			break
@@ -88,6 +84,7 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 		/* BACnetARRAY[N] of BACnetDeviceObjectReference */
 		switch tagNumber {
 		case 0: /* Optional Device ID */
+			fallthrough
 		case 1: /* Object ID */
 			tag = tagObjectID
 			break
@@ -134,6 +131,7 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 			break
 		}
 		break
+
 	default:
 		break
 	}

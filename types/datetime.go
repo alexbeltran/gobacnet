@@ -64,6 +64,17 @@ type Time struct {
 	Millisecond int
 }
 
+type DataTime struct {
+	Date
+	Time
+}
+
 // UnspecifiedTime means that this time is triggered through out a period. An
 // example of this is 02:FF:FF:FF will trigger all through out 2 am
 const UnspecifiedTime = 0xFF
+
+const (
+	TimeStampTime     = 0
+	TimeStampSequence = 1
+	TimeStampDatetime = 2
+)

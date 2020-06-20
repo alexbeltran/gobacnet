@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"fmt"
-
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
@@ -134,7 +133,9 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 
 			// Tag 3 - (Optional) Array Length
 			tag, meta = d.tagNumber()
-			if tag == 3 {
+			if tag == 2 {
+				continue
+			} else if tag == 3 {
 				if !meta.isContextSpecific() {
 					return &ErrorWrongTagType{ContextTag}
 				}
@@ -157,6 +158,23 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 					if meta.isContextSpecific() {
 						if meta.isClosing() {
 							_ = d.UnreadByte()
+						} else if meta.isOpening() {
+							if /*prop.Type == bactype.PROP_EVENT_TIME_STAMPS &&*/ tag == bactype.TimeStampDatetime {
+								dt := &bactype.DataTime{}
+								for {
+									tag, meta, length = d.tagNumberAndValue()
+									if meta.isClosing() && tag == bactype.TimeStampDatetime {
+										break
+									} else if tag == tagDate {
+										d.date(&dt.Date, int(length))
+									} else if tag == tagTime {
+										d.time(&dt.Time, int(length))
+									} else if length > 0 {
+										d.Skip(length)
+									}
+								}
+								array = append(array, dt)
+							}
 						} else {
 							// TODO how to parse it in Context???
 							*objects = append(*objects, obj)
@@ -187,12 +205,12 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 						array = append(array, data)
 					}
 					tag, meta = d.tagNumber()
-					if meta.isClosing() { //tag 4
+					if meta.isClosing() && tag == 4 { //tag 4
 						//
 						break
-					} else {
+					} /*else {
 						_ = d.UnreadByte()
-					}
+					}*/
 				}
 				if len(array) == 1 {
 					prop.Data = array[0]
@@ -201,7 +219,7 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 				}
 				obj.Properties = append(obj.Properties, prop)
 
-				tag, meta = d.tagNumber()
+				tag, meta, length = d.tagNumberAndValue()
 			} else if tag == 5 && meta.isOpening() {
 				//Tag 5 error
 				var class, code uint32
@@ -217,14 +235,6 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 			} else {
 				return &ErrorIncorrectTag{Expected: 4, Given: tag}
 			}
-		}
-
-		// Tag 1 - Closing Tag
-		tag, meta = d.tagNumber()
-		if tag != 1 {
-			return &ErrorIncorrectTag{Expected: 1, Given: tag}
-		} else if !meta.isClosing() {
-			return &ErrorWrongTagType{OpeningTag}
 		}
 
 		*objects = append(*objects, obj)
