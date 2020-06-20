@@ -132,18 +132,28 @@ func (e *Encoder) date(dt bactype.Date) {
 	e.write(uint8(dt.DayOfWeek))
 }
 
-func (d *Decoder) date(dt *bactype.Date) {
-	var year, month, day, dayOfWeek uint8
-
-	if dt.Year != bactype.UnspecifiedTime {
-		dt.Year = int(year) + epochYear
-	} else {
-		dt.Year = int(year)
+func (d *Decoder) date(dt *bactype.Date, length int) {
+	if length <= 0 {
+		return
+	}
+	data := make([]byte, length)
+	_, d.err = d.Read(data)
+	if d.err != nil {
+		return
+	}
+	if len(data) < 4 {
+		return
 	}
 
-	dt.Month = int(month)
-	dt.Day = int(day)
-	dt.DayOfWeek = bactype.DayOfWeek(dayOfWeek)
+	if dt.Year != bactype.UnspecifiedTime {
+		dt.Year = int(data[0]) + epochYear
+	} else {
+		dt.Year = int(data[0])
+	}
+
+	dt.Month = int(data[1])
+	dt.Day = int(data[2])
+	dt.DayOfWeek = bactype.DayOfWeek(data[3])
 }
 
 func (e *Encoder) time(t bactype.Time) {
@@ -242,10 +252,7 @@ func (e *Encoder) AppData(i interface{}) error {
 	return nil
 }
 
-func (d *Decoder) AppData() (interface{}, error) {
-	tag, _, lenvalue := d.tagNumberAndValue()
-	len := int(lenvalue)
-
+func (d *Decoder) AppDataOfTag(tag uint8, len int) (interface{}, error) {
 	switch tag {
 	case tagNull:
 		return bactype.Null{}, nil
@@ -281,7 +288,7 @@ func (d *Decoder) AppData() (interface{}, error) {
 		return d.enumerated(len), d.Error()
 	case tagDate:
 		var date bactype.Date
-		d.date(&date)
+		d.date(&date, len)
 		return date, d.Error()
 	case tagTime:
 		var t bactype.Time
@@ -296,4 +303,8 @@ func (d *Decoder) AppData() (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("Unsupported tag: %d", tag)
 	}
+}
+func (d *Decoder) AppData() (interface{}, error) {
+	tag, _, lenvalue := d.tagNumberAndValue()
+	return d.AppDataOfTag(tag, int(lenvalue))
 }

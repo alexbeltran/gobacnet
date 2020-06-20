@@ -102,40 +102,33 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 		obj.Properties = []bactype.Property{}
 
 		// Tag 0 - Object ID
-		var expectedTag uint8
 		tag, meta, length := d.tagNumberAndValue()
-		objType, instance := d.objectId()
-
-		if tag != expectedTag {
-			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-		}
-		if !meta.isContextSpecific() {
+		if tag != 0 {
+			return &ErrorIncorrectTag{Expected: 0, Given: tag}
+		} else if !meta.isContextSpecific() {
 			return &ErrorWrongTagType{ContextTag}
 		}
-
-		obj.ID.Type = objType
-		obj.ID.Instance = instance
+		obj.ID.Type, obj.ID.Instance = d.objectId()
 
 		// Tag 1 - Opening Tag
-		expectedTag++
 		tag, meta = d.tagNumber()
-		if tag != expectedTag {
-			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-		}
-		if !meta.isOpening() {
+		if tag != 1 {
+			return &ErrorIncorrectTag{Expected: 1, Given: tag}
+		} else if !meta.isOpening() {
 			return &ErrorWrongTagType{OpeningTag}
 		}
+
 		// Tag 2 - Property Tag
 		tag, meta, length = d.tagNumberAndValue()
+		if tag != 2 {
+			return &ErrorIncorrectTag{Expected: 2, Given: tag}
+		}
 
 		for d.len() > 0 && tag == 2 && !meta.isClosing() {
-			expectedTag = 2
 			if !meta.isContextSpecific() {
 				return &ErrorWrongTagType{ContextTag}
 			}
-			if tag != expectedTag {
-				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-			}
+
 			prop := bactype.Property{}
 			prop.Type = bactype.PropertyType(d.enumerated(int(length)))
 
@@ -154,31 +147,47 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 			}
 
 			// Tag 4 - Opening Tag
-			expectedTag = 4
-			if tag == expectedTag && meta.isOpening() {
+			if tag == 4 && meta.isOpening() {
 				var array []interface{}
 				tag, meta = d.tagNumber()
-				_ = d.UnreadByte()
+				if d.err != nil {
+					return d.err
+				}
 				for {
 					if meta.isContextSpecific() {
-						tag, meta = d.tagNumber()
-						if d.err != nil {
-							return d.err
-						}
-						if !meta.isClosing() {
-							//TODO to be done
+						if meta.isClosing() {
+							_ = d.UnreadByte()
+						} else {
+							// TODO how to parse it in Context???
 							*objects = append(*objects, obj)
 							return nil
+
+							lenValue := d.value(meta)
+							tag = tagTypeInContext(prop.Type, tag)
+							if tag == maxTag {
+								//skip unknown type
+								if lenValue > 0 {
+									if _, err := d.Read(make([]byte, lenValue)); err != nil {
+										return err
+									}
+								}
+							} else {
+								data, err := d.AppDataOfTag(tag, int(lenValue))
+								if err != nil {
+									return err
+								}
+								array = append(array, data)
+							}
 						}
 					} else {
-						data, err := d.AppData()
+						data, err := d.AppDataOfTag(tag, int(d.value(meta)))
 						if err != nil {
 							return err
 						}
 						array = append(array, data)
 					}
 					tag, meta = d.tagNumber()
-					if tag == expectedTag && meta.isClosing() {
+					if meta.isClosing() { //tag 4
 						//
 						break
 					} else {
@@ -193,7 +202,7 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 				obj.Properties = append(obj.Properties, prop)
 
 				tag, meta = d.tagNumber()
-			} else if tag == expectedTag+1 && meta.isOpening() {
+			} else if tag == 5 && meta.isOpening() {
 				//Tag 5 error
 				var class, code uint32
 				err := d.bacError(&class, &code)
@@ -201,14 +210,23 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 					return err
 				}
 				tag, meta = d.tagNumber()
-				if tag == expectedTag+1 && meta.isClosing() {
+				if tag == 5 && meta.isClosing() {
 					//
 				}
 				return fmt.Errorf("Class %d Code %d", class, code)
 			} else {
-				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
+				return &ErrorIncorrectTag{Expected: 4, Given: tag}
 			}
 		}
+
+		// Tag 1 - Closing Tag
+		tag, meta = d.tagNumber()
+		if tag != 1 {
+			return &ErrorIncorrectTag{Expected: 1, Given: tag}
+		} else if !meta.isClosing() {
+			return &ErrorWrongTagType{OpeningTag}
+		}
+
 		*objects = append(*objects, obj)
 	}
 	return d.Error()

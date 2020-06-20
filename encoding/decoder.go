@@ -65,6 +65,10 @@ func (d *Decoder) ReadByte() (byte, error) {
 	return d.buff.ReadByte()
 }
 
+func (d *Decoder) Read(data []byte) (int, error) {
+	return d.buff.Read(data)
+}
+
 func (d *Decoder) UnreadByte() error {
 	return d.buff.UnreadByte()
 }

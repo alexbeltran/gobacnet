@@ -21,7 +21,7 @@ func NewBitString(bufferSize int) *BitString {
 
 func (bs *BitString) Value() []bool {
 	value := make([]bool, bs.bitUsed)
-	for i := uint8(0); i <= bs.bitUsed; i++ {
+	for i := uint8(0); i < bs.bitUsed; i++ {
 		if bs.Bit(i) {
 			value[i] = true
 		} else {

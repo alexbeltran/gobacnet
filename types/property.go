@@ -25,6 +25,7 @@ const (
 	PropUnits            PropertyType = 117
 	PropPriorityArray    PropertyType = 87
 
+	//from github.com/bacnet-stack/bacnet-stack
 	PROP_ACKED_TRANSITIONS                   PropertyType = 0
 	PROP_ACK_REQUIRED                        PropertyType = 1
 	PROP_ACTION                              PropertyType = 2
