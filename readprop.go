@@ -85,7 +85,7 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bac
 		}
 		switch v := raw.(type) {
 		case error:
-			return out, err
+			return out, v
 		case []byte:
 			b = v
 		default:
