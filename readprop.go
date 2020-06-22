@@ -52,7 +52,7 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bac
 	defer c.tsm.Put(id)
 
 	enc := encoding.NewEncoder()
-	enc.NPDU(bactype.NPDU{
+	npdu := &bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dest.Addr,
 		Source:                c.dataLink.GetMyAddress(),
@@ -60,7 +60,8 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bac
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
 		HopCount:              bactype.DefaultHopCount,
-	})
+	}
+	enc.NPDU(npdu)
 
 	enc.ReadProperty(uint8(id), rp)
 	if enc.Error() != nil {
@@ -72,7 +73,7 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bac
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
 		var out bactype.PropertyData
-		_, err = c.Send(dest.Addr, enc.Bytes())
+		_, err = c.Send(dest.Addr, npdu, enc.Bytes())
 		if err != nil {
 			log.Print(err)
 			continue

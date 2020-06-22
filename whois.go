@@ -44,7 +44,7 @@ func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 	dest := *c.dataLink.GetBroadcastAddress()
 
 	enc := encoding.NewEncoder()
-	npdu := types.NPDU{
+	npdu := &types.NPDU{
 		Version:               types.ProtocolVersion,
 		Destination:           &dest,
 		Source:                c.dataLink.GetMyAddress(),
@@ -75,7 +75,7 @@ func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
 	// Run in parallel
 	errChan := make(chan error)
 	go func() {
-		_, err = c.Send(dest, enc.Bytes())
+		_, err = c.Send(dest, npdu, enc.Bytes())
 		errChan <- err
 	}()
 	values, err := c.utsm.Subscribe(start, end)

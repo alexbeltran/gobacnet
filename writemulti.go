@@ -18,8 +18,7 @@ func (c *Client) WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePrope
 	}
 	defer c.tsm.Put(id)
 
-	enc := encoding.NewEncoder()
-	enc.NPDU(bactype.NPDU{
+	npdu := &bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dev.Addr,
 		Source:                c.dataLink.GetMyAddress(),
@@ -27,7 +26,9 @@ func (c *Client) WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePrope
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
 		HopCount:              bactype.DefaultHopCount,
-	})
+	}
+	enc := encoding.NewEncoder()
+	enc.NPDU(npdu)
 
 	enc.WriteMultiProperty(uint8(id), wp)
 	if enc.Error() != nil {
@@ -43,7 +44,7 @@ func (c *Client) WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePrope
 	err = fmt.Errorf("go")
 
 	for count := 0; err != nil && count < maxReattempt; count++ {
-		err = c.sendWriteMultipleProperty(id, dev, pack)
+		err = c.sendWriteMultipleProperty(id, dev, npdu, pack)
 		if err == nil {
 			return nil
 		}
@@ -51,8 +52,8 @@ func (c *Client) WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePrope
 	return fmt.Errorf("failed %d tries: %v", maxReattempt, err)
 }
 
-func (c *Client) sendWriteMultipleProperty(id int, dev bactype.Device, request []byte) error {
-	_, err := c.Send(dev.Addr, request)
+func (c *Client) sendWriteMultipleProperty(id int, dev bactype.Device, npdu *bactype.NPDU, request []byte) error {
+	_, err := c.Send(dev.Addr, npdu, request)
 	if err != nil {
 		return err
 	}

@@ -100,7 +100,7 @@ func (c *udpDataLink) GetBroadcastAddress() *types.Address {
 	return c.broadcastAddress
 }
 
-func (c *udpDataLink) Send(data []byte, dest *types.Address) (int, error) {
+func (c *udpDataLink) Send(data []byte, npdu *types.NPDU, dest *types.Address) (int, error) {
 	// Get IP Address
 	d, err := dest.UDPAddr()
 	if err != nil {

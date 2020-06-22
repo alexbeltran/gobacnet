@@ -18,8 +18,7 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) err
 	}
 	defer c.tsm.Put(id)
 
-	enc := encoding.NewEncoder()
-	enc.NPDU(bactype.NPDU{
+	npdu := &bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dest.Addr,
 		Source:                c.dataLink.GetMyAddress(),
@@ -27,7 +26,9 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) err
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
 		HopCount:              bactype.DefaultHopCount,
-	})
+	}
+	enc := encoding.NewEncoder()
+	enc.NPDU(npdu)
 
 	enc.WriteProperty(uint8(id), wp)
 	if enc.Error() != nil {
@@ -39,7 +40,7 @@ func (c *Client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) err
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
 		var raw interface{}
-		_, err = c.Send(dest.Addr, enc.Bytes())
+		_, err = c.Send(dest.Addr, npdu, enc.Bytes())
 		if err != nil {
 			continue
 		}

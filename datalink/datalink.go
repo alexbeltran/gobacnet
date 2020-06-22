@@ -7,7 +7,7 @@ import (
 type DataLink interface {
 	GetMyAddress() *types.Address
 	GetBroadcastAddress() *types.Address
-	Send(data []byte, dest *types.Address) (int, error)
+	Send(data []byte, npdu *types.NPDU, dest *types.Address) (int, error)
 	Receive(data []byte) (*types.Address, int, error)
 	Close() error
 }

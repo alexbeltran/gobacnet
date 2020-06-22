@@ -33,7 +33,9 @@ package gobacnet
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/alexbeltran/gobacnet/datalink"
+	"github.com/alexbeltran/gobacnet/encoding"
 	"log"
 	"testing"
 
@@ -193,5 +195,70 @@ func testWritePropertyService(c *Client, t *testing.T) {
 
 	if resp.Object.Properties[0].Data != org {
 		t.Fatalf("unable to revert name back to original value %v: name is %v", org, resp.Object.Properties[0].Data)
+	}
+}
+
+func TestDeviceClient(t *testing.T) {
+	dataLink, err := datalink.NewUDPDataLink("本地连接", 47809)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	c := NewClient(dataLink, 0)
+	go c.Run()
+
+	devs, err := c.WhoIs(-1, -1)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("%+v\n", devs)
+	//	c.Objects(devs[0])
+
+	prop, err := c.ReadProperty(
+		devs[0],
+		types.PropertyData{
+			Object: types.Object{
+				ID: types.ObjectID{
+					Type:     types.AnalogInput,
+					Instance: 0,
+				},
+				Properties: []types.Property{{
+					Type:       85,
+					ArrayIndex: encoding.ArrayAll,
+				}},
+			},
+			ErrorClass: 0,
+			ErrorCode:  0,
+		})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(prop.Object.Properties)
+
+	props, err := c.ReadMultiProperty(devs[0], types.MultiplePropertyData{Objects: []types.Object{
+		{
+			ID: types.ObjectID{
+				Type:     types.AnalogInput,
+				Instance: 0,
+			},
+			Properties: []types.Property{
+				{
+					Type:       8,
+					ArrayIndex: encoding.ArrayAll,
+				},
+				/*	{
+					Type:       85,
+					ArrayIndex: encoding.ArrayAll,
+				},*/
+			},
+		},
+	}})
+
+	fmt.Println(props)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 }

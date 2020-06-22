@@ -192,7 +192,7 @@ func (c *Client) handleMsg(src *bactype.Address, b []byte) {
 }
 
 // Send transfers the raw apdu byte slice to the destination address.
-func (c *Client) Send(dest bactype.Address, data []byte) (int, error) {
+func (c *Client) Send(dest bactype.Address, npdu *bactype.NPDU, data []byte) (int, error) {
 	var header bactype.BVLC
 
 	// Set packet type
@@ -214,7 +214,7 @@ func (c *Client) Send(dest bactype.Address, data []byte) (int, error) {
 	}
 
 	// use default udp type, src = local address (nil)
-	return c.dataLink.Send(e.Bytes(), &dest)
+	return c.dataLink.Send(e.Bytes(), npdu, &dest)
 }
 
 // Close free resources for the client. Always call this function when using NewClient

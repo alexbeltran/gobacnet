@@ -59,8 +59,7 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.MultipleProper
 	}
 	defer c.tsm.Put(id)
 
-	enc := encoding.NewEncoder()
-	enc.NPDU(bactype.NPDU{
+	npdu := &bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dev.Addr,
 		Source:                c.dataLink.GetMyAddress(),
@@ -68,7 +67,10 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.MultipleProper
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
 		HopCount:              bactype.DefaultHopCount,
-	})
+	}
+
+	enc := encoding.NewEncoder()
+	enc.NPDU(npdu)
 	enc.ReadMultipleProperty(uint8(id), rp)
 	if enc.Error() != nil {
 		return out, fmt.Errorf("encoding read multiple property failed: %v", err)
@@ -82,7 +84,7 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.MultipleProper
 	err = fmt.Errorf("go")
 
 	for count := 0; err != nil && count < maxReattempt; count++ {
-		out, err = c.sendReadMultipleProperty(id, dev, pack)
+		out, err = c.sendReadMultipleProperty(id, dev, npdu, pack)
 		if err == nil {
 			return out, nil
 		}
@@ -90,9 +92,9 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.MultipleProper
 	return out, fmt.Errorf("failed %d tries: %v", maxReattempt, err)
 }
 
-func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, request []byte) (bactype.MultiplePropertyData, error) {
+func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, npdu *bactype.NPDU, request []byte) (bactype.MultiplePropertyData, error) {
 	var out bactype.MultiplePropertyData
-	_, err := c.Send(dev.Addr, request)
+	_, err := c.Send(dev.Addr, npdu, request)
 	if err != nil {
 		return out, err
 	}
