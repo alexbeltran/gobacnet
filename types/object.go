@@ -45,6 +45,7 @@ const (
 	DeviceType        ObjectType = 8
 	File              ObjectType = 10
 	MultiStateInput   ObjectType = 13
+	MultiStateOutput  ObjectType = 14
 	NotificationClass ObjectType = 15
 	MultiStateValue   ObjectType = 19
 	TrendLog          ObjectType = 20
@@ -63,6 +64,7 @@ const (
 	NotificationClassStr = "Notification Class"
 	MultiStateValueStr   = "Multi-State Value"
 	MultiStateInputStr   = "Multi-State Input"
+	MultiStateOutputStr  = "Multi-State Output"
 	TrendLogStr          = "Trend Log"
 	CharacterStringStr   = "Character String"
 )
@@ -79,6 +81,7 @@ var objTypeMap = map[ObjectType]string{
 	NotificationClass: NotificationClassStr,
 	MultiStateValue:   MultiStateValueStr,
 	MultiStateInput:   MultiStateInputStr,
+	MultiStateOutput:  MultiStateOutputStr,
 	TrendLog:          TrendLogStr,
 	CharacterString:   CharacterStringStr,
 }
@@ -94,6 +97,8 @@ var objStrTypeMap = map[string]ObjectType{
 	FileStr:              File,
 	NotificationClassStr: NotificationClass,
 	MultiStateValueStr:   MultiStateValue,
+	MultiStateInputStr:   MultiStateInput,
+	MultiStateOutputStr:  MultiStateOutput,
 	TrendLogStr:          TrendLog,
 	CharacterStringStr:   CharacterString,
 }
