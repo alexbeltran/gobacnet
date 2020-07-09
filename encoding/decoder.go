@@ -219,14 +219,16 @@ func (d *Decoder) bitString(length int) *bactype.BitString {
 	}
 	data := make([]uint8, length)
 	d.decode(data)
+	//refer to  https://github.com/bacnet-stack/bacnet-stack/blob/bacnet-stack-0.9.1/src/bacdcode.c#L672
 	bs := bactype.NewBitString(length - 1)
-	/* the first octet contains the unused bits */
+	/* the lower 3 bits of the first byte contains the unused bits in the remain bytes and the remain bytes contain the bit masks*/
 	bytesUsed := uint8(length - 1)
 	if bytesUsed <= bactype.MaxBitStringBytes {
 		for i := uint8(0); i < bytesUsed; i++ {
-			//why reverse bits??
+			//index of data start from 1
 			bs.SetByte(i, byteReverseBits(data[i+1]))
 		}
+		/*the lower 3 bits of the first byte store the number of unused bits , that is, less than 8*/
 		bs.SetBitsUsed(bytesUsed, data[0]&0x07)
 	}
 	return bs

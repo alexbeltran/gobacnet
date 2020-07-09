@@ -2,9 +2,10 @@ package encoding
 
 import "github.com/alexbeltran/gobacnet/types"
 
+/* refer to https://github.com/bacnet-stack/bacnet-stack/blob/bacnet-stack-0.9.1/src/bacapp.c#L583 */
 /* returns the fixed tag type for certain context tagged properties */
 func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
-	var tag uint8 = tagNumber
+	tag := tagNumber
 	switch property {
 	case types.PROP_ACTUAL_SHED_LEVEL:
 	case types.PROP_REQUESTED_SHED_LEVEL:
@@ -12,55 +13,35 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 		switch tagNumber {
 		case 0, 1:
 			tag = tagUint
-			break
 		case 2:
 			tag = tagReal
-			break
-		default:
-			break
 		}
-		break
 	case types.PROP_ACTION:
 		switch tagNumber {
 		case 0, 1:
 			tag = tagObjectID
-			break
 		case 2:
 			tag = tagEnumerated
-			break
 		case 3, 5, 6:
 			tag = tagUint
-			break
 		case 7, 8:
 			tag = tagBool
-			break
 		case 4: /* propertyValue: abstract syntax */
-		default:
-			break
 		}
-		break
 	case types.PROP_LIST_OF_GROUP_MEMBERS:
 		/* Sequence of ReadAccessSpecification */
 		switch tagNumber {
 		case 0:
 			tag = tagObjectID
-			break
-		default:
-			break
 		}
-		break
 	case types.PROP_EXCEPTION_SCHEDULE:
 		switch tagNumber {
 		case 1:
 			tag = tagObjectID
-			break
 		case 3:
 			tag = tagUint
-			break
 		case 0: /* calendarEntry: abstract syntax + context */
 		case 2: /* list of BACnetTimeValue: abstract syntax */
-		default:
-			break
 		}
 		break
 	case types.PROP_LOG_DEVICE_OBJECT_PROPERTY:
@@ -69,15 +50,10 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 			fallthrough
 		case 3: /* Device ID */
 			tag = tagObjectID
-			break
 		case 1: /* Property ID */
 			tag = tagEnumerated
-			break
 		case 2: /* Array index */
 			tag = tagUint
-			break
-		default:
-			break
 		}
 		break
 	case types.PROP_SUBORDINATE_LIST:
@@ -87,18 +63,12 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 			fallthrough
 		case 1: /* Object ID */
 			tag = tagObjectID
-			break
-		default:
-			break
 		}
-		break
-
 	case types.PROP_RECIPIENT_LIST:
 		/* List of BACnetDestination */
 		switch tagNumber {
 		case 0: /* Device Object ID */
 			tag = tagObjectID
-			break
 		case 1:
 			/* 2015.08.22 EKH 135-2012 pg 708
 			   todo - Context 1 in Recipient list would be a BACnetAddress, not coded yet...
@@ -107,9 +77,6 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 			        address  [1] BACnetAddress
 			         }
 			*/
-			break
-		default:
-			break
 		}
 		break
 	case types.PROP_ACTIVE_COV_SUBSCRIPTIONS:
@@ -117,23 +84,13 @@ func tagTypeInContext(property types.PropertyType, tagNumber uint8) uint8 {
 		switch tagNumber {
 		case 0: /* BACnetRecipientProcess */
 		case 1: /* BACnetObjectPropertyReference */
-			break
 		case 2: /* issueConfirmedNotifications */
 			tag = tagBool
-			break
 		case 3: /* timeRemaining */
 			tag = tagUint
-			break
 		case 4: /* covIncrement */
 			tag = tagReal
-			break
-		default:
-			break
 		}
-		break
-
-	default:
-		break
 	}
 
 	return tag
