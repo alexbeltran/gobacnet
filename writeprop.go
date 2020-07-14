@@ -9,7 +9,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) error {
+func (c *client) WriteProperty(dest bactype.Device, wp bactype.PropertyData) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	id, err := c.tsm.ID(ctx)

@@ -40,7 +40,7 @@ import (
 // Use constant ArrayAll for both fields to scan the entire network at once.
 // Using ArrayAll is highly discouraged for most networks since it can lead
 // to a high congested network.
-func (c *Client) WhoIs(low, high int) ([]types.Device, error) {
+func (c *client) WhoIs(low, high int) ([]types.Device, error) {
 	dest := *c.dataLink.GetBroadcastAddress()
 
 	enc := encoding.NewEncoder()

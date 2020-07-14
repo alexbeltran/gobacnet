@@ -90,7 +90,7 @@ func TestServices(t *testing.T) {
 
 }
 
-func testReadPropertyService(c *Client, t *testing.T) {
+func testReadPropertyService(c Client, t *testing.T) {
 	dev, err := c.WhoIs(testServer, testServer)
 	read := types.PropertyData{
 		Object: types.Object{
@@ -117,7 +117,7 @@ func testReadPropertyService(c *Client, t *testing.T) {
 	t.Logf("Response: %v", resp.Object.Properties[0].Data)
 }
 
-func testWhoIs(c *Client, t *testing.T) {
+func testWhoIs(c Client, t *testing.T) {
 	dev, err := c.WhoIs(testServer-1, testServer+1)
 	if err != nil {
 		t.Fatal(err)
@@ -130,7 +130,7 @@ func testWhoIs(c *Client, t *testing.T) {
 // This test will first cconver the name of an analogue sensor to a different
 // value, read the property to make sure the name was changed, revert back, and
 // ensure that the revert was successful
-func testWritePropertyService(c *Client, t *testing.T) {
+func testWritePropertyService(c Client, t *testing.T) {
 	const targetName = "Hotdog"
 	dev, err := c.WhoIs(testServer, testServer)
 	wp := types.PropertyData{

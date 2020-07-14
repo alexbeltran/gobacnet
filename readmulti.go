@@ -48,7 +48,7 @@ const maxReattempt = 2
 // good feature to read all present values of every object in the device. This
 // is a batch operation compared to a ReadProperty and should be used in place
 // when reading more than two objects/properties.
-func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.MultiplePropertyData) (bactype.MultiplePropertyData, error) {
+func (c *client) ReadMultiProperty(dev bactype.Device, rp bactype.MultiplePropertyData) (bactype.MultiplePropertyData, error) {
 	var out bactype.MultiplePropertyData
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -92,7 +92,7 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.MultipleProper
 	return out, fmt.Errorf("failed %d tries: %v", maxReattempt, err)
 }
 
-func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, npdu *bactype.NPDU, request []byte) (bactype.MultiplePropertyData, error) {
+func (c *client) sendReadMultipleProperty(id int, dev bactype.Device, npdu *bactype.NPDU, request []byte) (bactype.MultiplePropertyData, error) {
 	var out bactype.MultiplePropertyData
 	_, err := c.Send(dev.Addr, npdu, request)
 	if err != nil {

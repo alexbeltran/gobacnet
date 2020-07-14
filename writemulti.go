@@ -9,7 +9,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePropertyData) error {
+func (c *client) WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePropertyData) error {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	id, err := c.tsm.ID(ctx)
@@ -52,7 +52,7 @@ func (c *Client) WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePrope
 	return fmt.Errorf("failed %d tries: %v", maxReattempt, err)
 }
 
-func (c *Client) sendWriteMultipleProperty(id int, dev bactype.Device, npdu *bactype.NPDU, request []byte) error {
+func (c *client) sendWriteMultipleProperty(id int, dev bactype.Device, npdu *bactype.NPDU, request []byte) error {
 	_, err := c.Send(dev.Addr, npdu, request)
 	if err != nil {
 		return err

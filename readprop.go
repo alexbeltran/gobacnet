@@ -42,7 +42,7 @@ import (
 )
 
 // ReadProperty reads a single property from a single object in the given device.
-func (c *Client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bactype.PropertyData, error) {
+func (c *client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bactype.PropertyData, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	id, err := c.tsm.ID(ctx)

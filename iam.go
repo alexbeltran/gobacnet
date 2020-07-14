@@ -5,7 +5,7 @@ import (
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) iAm(dest bactype.Address) error {
+func (c *client) iAm(dest bactype.Address) error {
 	npdu := &bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dest,

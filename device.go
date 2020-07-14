@@ -49,7 +49,18 @@ const mtuHeaderLength = 4
 const defaultStateSize = 20
 const forwardHeaderLength = 10
 
-type Client struct {
+type Client interface {
+	io.Closer
+	Run()
+	WhoIs(low, high int) ([]bactype.Device, error)
+	Objects(dev bactype.Device) (bactype.Device, error)
+	ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bactype.PropertyData, error)
+	ReadMultiProperty(dev bactype.Device, rp bactype.MultiplePropertyData) (bactype.MultiplePropertyData, error)
+	WriteProperty(dest bactype.Device, wp bactype.PropertyData) error
+	WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePropertyData) error
+}
+
+type client struct {
 	dataLink       datalink.DataLink
 	tsm            *tsm.TSM
 	utsm           *utsm.Manager
@@ -59,14 +70,14 @@ type Client struct {
 
 // NewClient creates a new client with the given interface and
 // port.
-func NewClient(dataLink datalink.DataLink, maxPDU uint16) *Client {
+func NewClient(dataLink datalink.DataLink, maxPDU uint16) Client {
 	if maxPDU == 0 {
 		maxPDU = bactype.MaxAPDU
 	}
 	log := logrus.New()
 	log.Formatter = &logrus.TextFormatter{}
 	log.SetLevel(logrus.InfoLevel)
-	return &Client{
+	return &client{
 		dataLink: dataLink,
 		tsm:      tsm.New(defaultStateSize),
 		utsm: utsm.NewManager(
@@ -80,7 +91,7 @@ func NewClient(dataLink datalink.DataLink, maxPDU uint16) *Client {
 	}
 }
 
-func (c *Client) Run() {
+func (c *client) Run() {
 	var err error = nil
 	for err == nil {
 		b := c.readBufferPool.Get().([]byte)
@@ -94,7 +105,7 @@ func (c *Client) Run() {
 	}
 }
 
-func (c *Client) handleMsg(src *bactype.Address, b []byte) {
+func (c *client) handleMsg(src *bactype.Address, b []byte) {
 	var header bactype.BVLC
 	var npdu bactype.NPDU
 	var apdu bactype.APDU
@@ -192,7 +203,7 @@ func (c *Client) handleMsg(src *bactype.Address, b []byte) {
 }
 
 // Send transfers the raw apdu byte slice to the destination address.
-func (c *Client) Send(dest bactype.Address, npdu *bactype.NPDU, data []byte) (int, error) {
+func (c *client) Send(dest bactype.Address, npdu *bactype.NPDU, data []byte) (int, error) {
 	var header bactype.BVLC
 
 	// Set packet type
@@ -218,7 +229,7 @@ func (c *Client) Send(dest bactype.Address, npdu *bactype.NPDU, data []byte) (in
 }
 
 // Close free resources for the client. Always call this function when using NewClient
-func (c *Client) Close() error {
+func (c *client) Close() error {
 	if c.dataLink != nil {
 		c.dataLink.Close()
 	}
