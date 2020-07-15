@@ -3,6 +3,7 @@ package datalink
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/alexbeltran/gobacnet/types"
 )
@@ -19,40 +20,20 @@ type udpDataLink struct {
 }
 
 func NewUDPDataLink(inter string, port int) (DataLink, error) {
-	i, err := net.InterfaceByName(inter)
-	if err != nil {
-		return nil, err
-	}
 	if port == 0 {
 		port = DefaultPort
 	}
-	uni, err := i.Addrs()
-	if err != nil {
-		return nil, err
-	}
 
-	if len(uni) == 0 {
-		return nil, fmt.Errorf("interface %s has no addresses", inter)
-	}
-
-	// Clear out the value
-	var myAddress string
-	// Find the first IP4 ip
-	for _, adr := range uni {
-		IP, _, _ := net.ParseCIDR(adr.String())
-
-		// To4 is non nil when the type is ip4
-		if IP.To4() != nil {
-			myAddress = adr.String()
-			break
+	myCIDRAddress := inter
+	if !strings.ContainsRune(inter, '/') {
+		addr, err2 := FindCIDRAddress(inter)
+		if err2 != nil {
+			return nil, err2
 		}
-	}
-	if len(myAddress) == 0 {
-		// We couldn't find a interface or all of them are ip6
-		return nil, fmt.Errorf("no valid broadcasting address was found on interface %s", inter)
+		myCIDRAddress = addr
 	}
 
-	ip, ipnet, err := net.ParseCIDR(myAddress)
+	ip, ipnet, err := net.ParseCIDR(myCIDRAddress)
 	if err != nil {
 		return nil, err
 	}
@@ -136,4 +117,33 @@ func UDPToAddress(n *net.UDPAddr) *types.Address {
 
 	a.MacLen = uint8(length)
 	return a
+}
+
+// FindCIDRAddress find out CIDR address from net interface
+func FindCIDRAddress(inter string) (string, error) {
+	i, err := net.InterfaceByName(inter)
+	if err != nil {
+		return "", err
+	}
+
+	uni, err := i.Addrs()
+	if err != nil {
+		return "", err
+	}
+
+	if len(uni) == 0 {
+		return "", fmt.Errorf("interface %s has no addresses", inter)
+	}
+
+	// Find the first IP4 ip
+	for _, adr := range uni {
+		IP, _, _ := net.ParseCIDR(adr.String())
+
+		// To4 is non nil when the type is ip4
+		if IP.To4() != nil {
+			return adr.String(), nil
+		}
+	}
+	// We couldn't find a interface or all of them are ip6
+	return "", fmt.Errorf("no valid broadcasting address was found on interface %s", inter)
 }
