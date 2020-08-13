@@ -69,6 +69,12 @@ func getBroadcast(addr string) (net.IP, error) {
 	return broadcast, nil
 }
 
+func setReuseAddress(conn net.PacketConn) { 
+        file, _ := conn.(*net.UDPConn).File() 
+        fd := file.Fd() 
+        syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1); 
+} 
+
 // NewClient creates a new client with the given interface and
 // port.
 func NewClient(inter string, port int) (*Client, error) {
@@ -123,6 +129,7 @@ func NewClient(inter string, port int) (*Client, error) {
 	c.utsm = utsm.NewManager(options...)
 	udp, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", c.port))
 	conn, err := net.ListenUDP("udp", udp)
+	setReuseAddress(conn)
 	if err != nil {
 		return nil, err
 	}
