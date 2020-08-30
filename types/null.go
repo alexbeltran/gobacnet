@@ -29,17 +29,11 @@ based on this file might be covered by the GNU General Public
 License.
 */
 
-package gobacnet
+package types
 
-// MTSP
-const defaultMTSPBAUD = 38400
-const defaultMTSPMAC = 127
+// Null is used when a value is empty.
+type Null struct{}
 
-// General Bacnet
-const defaultMaxMaster = 127
-const defautlMaxInfoFrames = 1
-
-// ArrayAll is used when reading/writting to a property to read/write the entire
-// array
-const ArrayAll = 0xFFFFFFFF
-const maxStandardBacnetType = 128
+func (n Null) String() string {
+	return "<null>"
+}

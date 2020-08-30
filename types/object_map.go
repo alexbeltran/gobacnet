@@ -29,17 +29,53 @@ based on this file might be covered by the GNU General Public
 License.
 */
 
-package gobacnet
+package types
 
-// MTSP
-const defaultMTSPBAUD = 38400
-const defaultMTSPMAC = 127
+import "encoding/json"
 
-// General Bacnet
-const defaultMaxMaster = 127
-const defautlMaxInfoFrames = 1
+type ObjectMap map[ObjectType]map[ObjectInstance]Object
 
-// ArrayAll is used when reading/writting to a property to read/write the entire
-// array
-const ArrayAll = 0xFFFFFFFF
-const maxStandardBacnetType = 128
+// Len returns the total number of entries within the object map.
+func (o ObjectMap) Len() int {
+	counter := 0
+	for _, t := range o {
+		for _ = range t {
+			counter++
+		}
+
+	}
+	return counter
+}
+
+func (om ObjectMap) MarshalJSON() ([]byte, error) {
+	m := make(map[string]map[ObjectInstance]Object)
+	for typ, sub := range om {
+		key := typ.String()
+		if m[key] == nil {
+			m[key] = make(map[ObjectInstance]Object)
+		}
+		for inst, obj := range sub {
+			m[key][inst] = obj
+		}
+	}
+	return json.Marshal(m)
+}
+
+func (om ObjectMap) UnmarshalJSON(data []byte) error {
+	m := make(map[string]map[ObjectInstance]Object, 0)
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return err
+	}
+
+	for t, sub := range m {
+		key := GetType(t)
+		if om[key] == nil {
+			om[key] = make(map[ObjectInstance]Object)
+		}
+		for inst, obj := range sub {
+			om[key][inst] = obj
+		}
+	}
+	return nil
+}

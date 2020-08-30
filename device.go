@@ -33,133 +33,208 @@ package gobacnet
 
 import (
 	"fmt"
-	"net"
-	"os"
+	"github.com/alexbeltran/gobacnet/datalink"
+	"github.com/alexbeltran/gobacnet/encoding"
+	bactype "github.com/alexbeltran/gobacnet/types"
+	"io"
+	"sync"
 	"time"
 
 	"github.com/alexbeltran/gobacnet/tsm"
-	bactype "github.com/alexbeltran/gobacnet/types"
 	"github.com/alexbeltran/gobacnet/utsm"
 	"github.com/sirupsen/logrus"
 )
 
+const mtuHeaderLength = 4
 const defaultStateSize = 20
+const forwardHeaderLength = 10
 
-type Client struct {
-	netInterface     *net.Interface
-	myAddress        string
-	broadcastAddress net.IP
-	port             int
-	tsm              *tsm.TSM
-	utsm             *utsm.Manager
-	listener         *net.UDPConn
-	log              *logrus.Logger
+type Client interface {
+	io.Closer
+	Run()
+	WhoIs(low, high int) ([]bactype.Device, error)
+	Objects(dev bactype.Device) (bactype.Device, error)
+	ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bactype.PropertyData, error)
+	ReadMultiProperty(dev bactype.Device, rp bactype.MultiplePropertyData) (bactype.MultiplePropertyData, error)
+	WriteProperty(dest bactype.Device, wp bactype.PropertyData) error
+	WriteMultiProperty(dev bactype.Device, wp bactype.MultiplePropertyData) error
 }
 
-// getBroadcast uses the given address with subnet to return the broadcast address
-func getBroadcast(addr string) (net.IP, error) {
-	_, ipnet, err := net.ParseCIDR(addr)
-	if err != nil {
-		return net.IP{}, err
-	}
-	broadcast := net.IP(make([]byte, 4))
-	for i := range broadcast {
-		broadcast[i] = ipnet.IP[i] | ^ipnet.Mask[i]
-	}
-	return broadcast, nil
+type client struct {
+	dataLink       datalink.DataLink
+	tsm            *tsm.TSM
+	utsm           *utsm.Manager
+	readBufferPool sync.Pool
+	log            *logrus.Logger
 }
 
 // NewClient creates a new client with the given interface and
 // port.
-func NewClient(inter string, port int) (*Client, error) {
-	c := &Client{}
-	i, err := net.InterfaceByName(inter)
+func NewClient(dataLink datalink.DataLink, maxPDU uint16) Client {
+	if maxPDU == 0 {
+		maxPDU = bactype.MaxAPDU
+	}
+	log := logrus.New()
+	log.Formatter = &logrus.TextFormatter{}
+	log.SetLevel(logrus.InfoLevel)
+	return &client{
+		dataLink: dataLink,
+		tsm:      tsm.New(defaultStateSize),
+		utsm: utsm.NewManager(
+			utsm.DefaultSubscriberTimeout(time.Second*time.Duration(10)),
+			utsm.DefaultSubscriberLastReceivedTimeout(time.Second*time.Duration(2)),
+		),
+		readBufferPool: sync.Pool{New: func() interface{} {
+			return make([]byte, maxPDU)
+		}},
+		log: log,
+	}
+}
+
+func (c *client) Run() {
+	var err error = nil
+	for err == nil {
+		b := c.readBufferPool.Get().([]byte)
+		var addr *bactype.Address
+		var n int
+		addr, n, err = c.dataLink.Receive(b)
+		if err != nil {
+			continue
+		}
+		go c.handleMsg(addr, b[:n])
+	}
+}
+
+func (c *client) handleMsg(src *bactype.Address, b []byte) {
+	var header bactype.BVLC
+	var npdu bactype.NPDU
+	var apdu bactype.APDU
+
+	dec := encoding.NewDecoder(b)
+	err := dec.BVLC(&header)
 	if err != nil {
-		return c, err
-	}
-	c.netInterface = i
-	if port == 0 {
-		c.port = DefaultPort
-	} else {
-		c.port = port
-	}
-	uni, err := i.Addrs()
-	if err != nil {
-		return c, err
+		c.log.Error(err)
+		return
 	}
 
-	if len(uni) == 0 {
-		return c, fmt.Errorf("interface %s has no addresses", inter)
-	}
+	if header.Function == bactype.BacFuncBroadcast || header.Function == bactype.BacFuncUnicast || header.Function == bactype.BacFuncForwardedNPDU {
+		// Remove the header information
+		b = b[mtuHeaderLength:]
+		err = dec.NPDU(&npdu)
+		if err != nil {
+			return
+		}
 
-	// Clear out the value
-	c.myAddress = ""
-	// Find the first IP4 ip
-	for _, adr := range uni {
-		IP, _, _ := net.ParseCIDR(adr.String())
+		if npdu.IsNetworkLayerMessage {
+			c.log.Debug("Ignored Network Layer Message")
+			return
+		}
 
-		// To4 is non nil when the type is ip4
-		if IP.To4() != nil {
-			c.myAddress = adr.String()
-			break
+		// We want to keep the APDU intact so we will get a snapshot before decoding
+		// further
+		send := dec.Bytes()
+		err = dec.APDU(&apdu)
+		if err != nil {
+			c.log.Errorf("Issue decoding APDU: %v", err)
+			return
+		}
+
+		switch apdu.DataType {
+		case bactype.UnconfirmedServiceRequest:
+			if apdu.UnconfirmedService == bactype.ServiceUnconfirmedIAm {
+				c.log.Debug("Received IAm Message")
+				dec = encoding.NewDecoder(apdu.RawData)
+				var iam bactype.IAm
+
+				err = dec.IAm(&iam)
+
+				iam.Addr = *src
+				if err != nil {
+					c.log.Error(err)
+					return
+				}
+				c.utsm.Publish(int(iam.ID.Instance), iam)
+			} else if apdu.UnconfirmedService == bactype.ServiceUnconfirmedWhoIs {
+				dec := encoding.NewDecoder(apdu.RawData)
+				var low, high int32
+				dec.WhoIs(&low, &high)
+				// For now we are going to ignore who is request.
+				//log.WithFields(log.Fields{"low": low, "high": high}).Debug("WHO IS Request")
+			} else {
+				c.log.Errorf("Unconfirmed: %d %v", apdu.UnconfirmedService, apdu.RawData)
+			}
+		case bactype.SimpleAck:
+			c.log.Debug("Received Simple Ack")
+			err := c.tsm.Send(int(apdu.InvokeId), send)
+			if err != nil {
+				return
+			}
+		case bactype.ComplexAck:
+			c.log.Debug("Received Complex Ack")
+			err := c.tsm.Send(int(apdu.InvokeId), send)
+			if err != nil {
+				return
+			}
+		case bactype.ConfirmedServiceRequest:
+			c.log.Debug("Received  Confirmed Service Request")
+			err := c.tsm.Send(int(apdu.InvokeId), send)
+			if err != nil {
+				return
+			}
+		case bactype.Error:
+			err := fmt.Errorf("error class %d code %d", apdu.Error.Class, apdu.Error.Code)
+			err = c.tsm.Send(int(apdu.InvokeId), err)
+			if err != nil {
+				c.log.Debugf("unable to Send error to %d: %v", apdu.InvokeId, err)
+			}
+		default:
+			// Ignore it
+			//log.WithFields(log.Fields{"raw": b}).Debug("An ignored packet went through")
 		}
 	}
-	if len(c.myAddress) == 0 {
-		// We couldn't find a interface or all of them are ip6
-		return nil, fmt.Errorf("No valid broadcasting address was found on interface %s", inter)
-	}
 
-	broadcast, err := getBroadcast(c.myAddress)
-	if err != nil {
-		return c, err
+	if header.Function == bactype.BacFuncForwardedNPDU {
+		// Right now we are ignoring the NPDU data that is stored in the packet. Eventually
+		// we will need to check it for any additional information we can gleam.
+		// NDPU has source
+		b = b[forwardHeaderLength:]
+		c.log.Debug("Ignored NDPU Forwarded")
 	}
-	c.broadcastAddress = broadcast
-
-	c.tsm = tsm.New(defaultStateSize)
-	options := []utsm.ManagerOption{
-		utsm.DefaultSubscriberTimeout(time.Second * time.Duration(10)),
-		utsm.DefaultSubscriberLastReceivedTimeout(time.Second * time.Duration(2)),
-	}
-	c.utsm = utsm.NewManager(options...)
-	udp, _ := net.ResolveUDPAddr("udp4", fmt.Sprintf(":%d", c.port))
-	conn, err := net.ListenUDP("udp", udp)
-	if err != nil {
-		return nil, err
-	}
-
-	c.listener = conn
-	c.log = logrus.New()
-	c.log.Formatter = &logrus.TextFormatter{}
-	c.log.SetLevel(logrus.DebugLevel)
-
-	// open a debug file
-	f, err := os.Create("gobacnet.log")
-	if err != nil {
-		return c, fmt.Errorf("Could not create a log file")
-	}
-	c.log.Out = f
-
-	// Print out relevant information
-	c.log.Debug(fmt.Sprintf("Broadcast Address: %v", c.broadcastAddress))
-	c.log.Debug(fmt.Sprintf("Local Address: %s", c.myAddress))
-	c.log.Debug(fmt.Sprintf("Port: %x", c.port))
-	go c.listen()
-	return c, nil
 }
 
-func (c *Client) localAddress() (la bactype.Address, err error) {
-	ip, _, _ := net.ParseCIDR(c.myAddress)
-	ad := ip.To4()
-	udp := net.UDPAddr{
-		IP:   ad,
-		Port: c.port,
+// Send transfers the raw apdu byte slice to the destination address.
+func (c *client) Send(dest bactype.Address, npdu *bactype.NPDU, data []byte) (int, error) {
+	var header bactype.BVLC
+
+	// Set packet type
+	header.Type = bactype.BVLCTypeBacnetIP
+
+	if dest.IsBroadcast() || dest.IsSubBroadcast() {
+		// SET BROADCAST FLAG
+		header.Function = bactype.BacFuncBroadcast
+	} else {
+		// SET UNICAST FLAG
+		header.Function = bactype.BacFuncUnicast
 	}
-	la = bactype.UDPToAddress(&udp)
-	return la, nil
+	header.Length = uint16(mtuHeaderLength + len(data))
+	header.Data = data
+	e := encoding.NewEncoder()
+	err := e.BVLC(header)
+	if err != nil {
+		return 0, err
+	}
+
+	// use default udp type, src = local address (nil)
+	return c.dataLink.Send(e.Bytes(), npdu, &dest)
 }
 
-func (c *Client) localUDPAddress() (*net.UDPAddr, error) {
-	ip, _, _ := net.ParseCIDR(c.myAddress)
-	netstr := fmt.Sprintf("%s:%d", ip.String(), c.port)
-	return net.ResolveUDPAddr("udp4", netstr)
+// Close free resources for the client. Always call this function when using NewClient
+func (c *client) Close() error {
+	if c.dataLink != nil {
+		c.dataLink.Close()
+	}
+	if f, ok := c.log.Out.(io.Closer); ok {
+		return f.Close()
+	}
+	return nil
 }

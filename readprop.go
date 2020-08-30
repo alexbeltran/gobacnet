@@ -42,55 +42,51 @@ import (
 )
 
 // ReadProperty reads a single property from a single object in the given device.
-func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) (bactype.ReadPropertyData, error) {
+func (c *client) ReadProperty(dest bactype.Device, rp bactype.PropertyData) (bactype.PropertyData, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 	id, err := c.tsm.ID(ctx)
 	if err != nil {
-		return bactype.ReadPropertyData{}, fmt.Errorf("unable to get an transaction id: %v", err)
+		return bactype.PropertyData{}, fmt.Errorf("unable to get an transaction id: %v", err)
 	}
 	defer c.tsm.Put(id)
 
-	udp, err := c.localUDPAddress()
-	if err != nil {
-		return bactype.ReadPropertyData{}, err
-	}
-	src := bactype.UDPToAddress(udp)
-
 	enc := encoding.NewEncoder()
-	enc.NPDU(bactype.NPDU{
+	npdu := &bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dest.Addr,
-		Source:                &src,
+		Source:                c.dataLink.GetMyAddress(),
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
 		HopCount:              bactype.DefaultHopCount,
-	})
+	}
+	enc.NPDU(npdu)
 
 	enc.ReadProperty(uint8(id), rp)
 	if enc.Error() != nil {
-		return bactype.ReadPropertyData{}, err
+		return bactype.PropertyData{}, err
 	}
 
 	// the value filled doesn't matter. it just needs to be non nil
 	err = fmt.Errorf("go")
 	for count := 0; err != nil && count < 2; count++ {
 		var b []byte
-		var out bactype.ReadPropertyData
-		_, err = c.send(dest.Addr, enc.Bytes())
+		var out bactype.PropertyData
+		_, err = c.Send(dest.Addr, npdu, enc.Bytes())
 		if err != nil {
 			log.Print(err)
 			continue
 		}
 
-		raw, err := c.tsm.Receive(id, time.Duration(5)*time.Second)
+		var raw interface{}
+		raw, err = c.tsm.Receive(id, time.Duration(5)*time.Second)
 		if err != nil {
 			continue
 		}
 		switch v := raw.(type) {
 		case error:
-			return out, err
+			return out, v
 		case []byte:
 			b = v
 		default:
@@ -100,12 +96,19 @@ func (c *Client) ReadProperty(dest bactype.Device, rp bactype.ReadPropertyData) 
 		dec := encoding.NewDecoder(b)
 
 		var apdu bactype.APDU
-		dec.APDU(&apdu)
-		dec.ReadProperty(&out)
-		if err = dec.Error(); err != nil {
+		if err = dec.APDU(&apdu); err != nil {
 			continue
 		}
-		return out, err
+		if apdu.Error.Class != 0 || apdu.Error.Code != 0 {
+			err = fmt.Errorf("received error, class: %d, code: %d", apdu.Error.Class, apdu.Error.Code)
+			continue
+		}
+
+		if err = dec.ReadProperty(&out); err != nil {
+			continue
+		}
+
+		return out, dec.Error()
 	}
-	return bactype.ReadPropertyData{}, err
+	return bactype.PropertyData{}, err
 }

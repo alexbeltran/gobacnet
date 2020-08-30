@@ -61,7 +61,7 @@ func (e *Encoder) APDU(a bactype.APDU) error {
 	case bactype.Abort:
 		return fmt.Errorf("Decoded Aborted")
 	default:
-		return fmt.Errorf("Unknown PDU type:%d", meta.DataType)
+		return fmt.Errorf("Unknown PDU type: %d", meta.DataType())
 	}
 	return nil
 }
@@ -96,6 +96,8 @@ func (d *Decoder) APDU(a *bactype.APDU) error {
 	switch a.DataType {
 	case bactype.ComplexAck:
 		return d.apduComplexAck(a)
+	case bactype.SimpleAck:
+		return d.apduSimpleAck(a)
 	case bactype.UnconfirmedServiceRequest:
 		return d.apduUnconfirmed(a)
 	case bactype.ConfirmedServiceRequest:
@@ -116,32 +118,33 @@ func (d *Decoder) APDU(a *bactype.APDU) error {
 func (d *Decoder) apduError(a *bactype.APDU) error {
 	d.decode(&a.InvokeId)
 	d.decode(&a.Service)
-	class, err := d.AppData()
-	if err != nil {
-		return err
-	}
 
-	c, ok := class.(uint32)
-	if !ok {
-		return fmt.Errorf("Unable to decode error class")
+	_, meta := d.tagNumber()
+	if meta.isOpening() {
+		_, _, value := d.tagNumberAndValue()
+		a.Error.Class = d.unsigned(int(value))
+		_, _, value = d.tagNumberAndValue()
+		a.Error.Code = d.unsigned(int(value))
+		_, meta = d.tagNumber()
+		if !meta.isClosing() {
+			return &ErrorWrongTagType{ClosingTag}
+		}
+	} else {
+		_, _, value := d.tagNumberAndValue()
+		a.Error.Class = d.unsigned(int(value))
+		_, _, value = d.tagNumberAndValue()
+		a.Error.Code = d.unsigned(int(value))
 	}
-	a.Error.Class = c
-
-	code, err := d.AppData()
-	if err != nil {
-		return err
-	}
-
-	c, ok = code.(uint32)
-	if !ok {
-		return fmt.Errorf("Unable to decode error code")
-	}
-	a.Error.Code = c
-
 	return nil
 }
 
 func (d *Decoder) apduComplexAck(a *bactype.APDU) error {
+	d.decode(&a.InvokeId)
+	d.decode(&a.Service)
+	return d.Error()
+}
+
+func (d *Decoder) apduSimpleAck(a *bactype.APDU) error {
 	d.decode(&a.InvokeId)
 	d.decode(&a.Service)
 	return d.Error()

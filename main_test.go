@@ -33,10 +33,11 @@ package gobacnet
 
 import (
 	"encoding/json"
+	"fmt"
+	"github.com/alexbeltran/gobacnet/datalink"
+	"github.com/alexbeltran/gobacnet/encoding"
 	"log"
 	"testing"
-
-	"github.com/alexbeltran/gobacnet/property"
 
 	"github.com/alexbeltran/gobacnet/types"
 )
@@ -45,39 +46,17 @@ const interfaceName = "eth0"
 const testServer = 1234
 
 // TestMain are general test
-func TestMain(t *testing.T) {
-	c, err := NewClient(interfaceName, DefaultPort)
+func TestUdpDataLink(t *testing.T) {
+	dataLink, err := datalink.NewUDPDataLink(interfaceName, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
+	c := NewClient(dataLink, 0)
 	c.Close()
 
-	d, err := NewClient("pizzainterfacenotreal", DefaultPort)
-	d.Close()
+	_, err = datalink.NewUDPDataLink("pizzainterfacenotreal", 0)
 	if err == nil {
 		t.Fatal("Successfully passed a false interface.")
-	}
-}
-func TestGetBroadcast(t *testing.T) {
-	failTest := func(addr string) {
-		_, err := getBroadcast(addr)
-		if err == nil {
-			t.Fatalf("%s is not a valid parameter, but it did not gracefully crash", addr)
-		}
-	}
-
-	failTest("frog")
-	failTest("frog/dog")
-	failTest("frog/24")
-	failTest("16.18.dog/32")
-
-	s, err := getBroadcast("192.168.23.1/24")
-	if err != nil {
-		t.Fatal(err)
-	}
-	correct := "192.168.23.255"
-	if s.String() != correct {
-		t.Fatalf("%s is incorrect. It should be %s", s.String(), correct)
 	}
 }
 
@@ -90,10 +69,11 @@ func TestMac(t *testing.T) {
 }
 
 func TestServices(t *testing.T) {
-	c, err := NewClient(interfaceName, DefaultPort)
+	dataLink, err := datalink.NewUDPDataLink(interfaceName, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
+	c := NewClient(dataLink, 0)
 	defer c.Close()
 
 	t.Run("Read Property", func(t *testing.T) {
@@ -104,11 +84,15 @@ func TestServices(t *testing.T) {
 		testWhoIs(c, t)
 	})
 
+	t.Run("WriteProperty", func(t *testing.T) {
+		testWritePropertyService(c, t)
+	})
+
 }
 
-func testReadPropertyService(c *Client, t *testing.T) {
+func testReadPropertyService(c Client, t *testing.T) {
 	dev, err := c.WhoIs(testServer, testServer)
-	read := types.ReadPropertyData{
+	read := types.PropertyData{
 		Object: types.Object{
 			ID: types.ObjectID{
 				Type:     types.AnalogValue,
@@ -116,7 +100,7 @@ func testReadPropertyService(c *Client, t *testing.T) {
 			},
 			Properties: []types.Property{
 				types.Property{
-					Type:       property.ObjectName, // Present value
+					Type:       types.PropObjectName, // Present value
 					ArrayIndex: ArrayAll,
 				},
 			},
@@ -133,12 +117,148 @@ func testReadPropertyService(c *Client, t *testing.T) {
 	t.Logf("Response: %v", resp.Object.Properties[0].Data)
 }
 
-func testWhoIs(c *Client, t *testing.T) {
+func testWhoIs(c Client, t *testing.T) {
 	dev, err := c.WhoIs(testServer-1, testServer+1)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(dev) == 0 {
 		t.Fatalf("Unable to find device id %d", testServer)
+	}
+}
+
+// This test will first cconver the name of an analogue sensor to a different
+// value, read the property to make sure the name was changed, revert back, and
+// ensure that the revert was successful
+func testWritePropertyService(c Client, t *testing.T) {
+	const targetName = "Hotdog"
+	dev, err := c.WhoIs(testServer, testServer)
+	wp := types.PropertyData{
+		Object: types.Object{
+			ID: types.ObjectID{
+				Type:     types.AnalogValue,
+				Instance: 1,
+			},
+			Properties: []types.Property{
+				types.Property{
+					Type:       types.PropObjectName, // Present value
+					ArrayIndex: ArrayAll,
+					Priority:   types.Normal,
+				},
+			},
+		},
+	}
+
+	if len(dev) == 0 {
+		t.Fatalf("Unable to find device id %d", testServer)
+	}
+	resp, err := c.ReadProperty(dev[0], wp)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Store the original response since we plan to put it back in after
+	org := resp.Object.Properties[0].Data
+	t.Logf("original name is: %d", org)
+
+	wp.Object.Properties[0].Data = targetName
+	err = c.WriteProperty(dev[0], wp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = c.ReadProperty(dev[0], wp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	d := resp.Object.Properties[0].Data
+	s, ok := d.(string)
+	if !ok {
+		log.Fatalf("unexpected return type %T", d)
+	}
+
+	if s != targetName {
+		log.Fatalf("write to name %s did not successed, name was %s", targetName, s)
+	}
+
+	// Revert Changes
+	wp.Object.Properties[0].Data = org
+	err = c.WriteProperty(dev[0], wp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err = c.ReadProperty(dev[0], wp)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if resp.Object.Properties[0].Data != org {
+		t.Fatalf("unable to revert name back to original value %v: name is %v", org, resp.Object.Properties[0].Data)
+	}
+}
+
+func TestDeviceClient(t *testing.T) {
+	dataLink, err := datalink.NewUDPDataLink("本地连接", 47809)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	c := NewClient(dataLink, 0)
+	go c.Run()
+
+	devs, err := c.WhoIs(-1, -1)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Printf("%+v\n", devs)
+	//	c.Objects(devs[0])
+
+	prop, err := c.ReadProperty(
+		devs[0],
+		types.PropertyData{
+			Object: types.Object{
+				ID: types.ObjectID{
+					Type:     types.AnalogInput,
+					Instance: 0,
+				},
+				Properties: []types.Property{{
+					Type:       85,
+					ArrayIndex: encoding.ArrayAll,
+				}},
+			},
+			ErrorClass: 0,
+			ErrorCode:  0,
+		})
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(prop.Object.Properties)
+
+	props, err := c.ReadMultiProperty(devs[0], types.MultiplePropertyData{Objects: []types.Object{
+		{
+			ID: types.ObjectID{
+				Type:     types.AnalogInput,
+				Instance: 0,
+			},
+			Properties: []types.Property{
+				{
+					Type:       8,
+					ArrayIndex: encoding.ArrayAll,
+				},
+				/*	{
+					Type:       85,
+					ArrayIndex: encoding.ArrayAll,
+				},*/
+			},
+		},
+	}})
+
+	fmt.Println(props)
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 }

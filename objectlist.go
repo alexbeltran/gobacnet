@@ -3,17 +3,16 @@ package gobacnet
 import (
 	"fmt"
 
-	"github.com/alexbeltran/gobacnet/property"
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (c *Client) objectListLen(dev bactype.Device) (int, error) {
-	rp := bactype.ReadPropertyData{
+func (c *client) objectListLen(dev bactype.Device) (int, error) {
+	rp := bactype.PropertyData{
 		Object: bactype.Object{
 			ID: dev.ID,
 			Properties: []bactype.Property{
 				bactype.Property{
-					Type:       property.ObjectList,
+					Type:       bactype.PropObjectList,
 					ArrayIndex: 0,
 				},
 			},
@@ -36,8 +35,8 @@ func (c *Client) objectListLen(dev bactype.Device) (int, error) {
 	return int(data), nil
 }
 
-func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Object, error) {
-	rpm := bactype.ReadMultipleProperty{
+func (c *client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Object, error) {
+	rpm := bactype.MultiplePropertyData{
 		Objects: []bactype.Object{
 			bactype.Object{
 				ID: dev.ID,
@@ -47,7 +46,7 @@ func (c *Client) objectsRange(dev bactype.Device, start, end int) ([]bactype.Obj
 
 	for i := start; i <= end; i++ {
 		rpm.Objects[0].Properties = append(rpm.Objects[0].Properties, bactype.Property{
-			Type:       property.ObjectList,
+			Type:       bactype.PropObjectList,
 			ArrayIndex: uint32(i),
 		})
 	}
@@ -84,7 +83,7 @@ func objectCopy(dest bactype.ObjectMap, src []bactype.Object) {
 
 }
 
-func (c *Client) objectList(dev *bactype.Device) error {
+func (c *client) objectList(dev *bactype.Device) error {
 	dev.Objects = make(bactype.ObjectMap)
 
 	l, err := c.objectListLen(*dev)
@@ -117,13 +116,13 @@ func (c *Client) objectList(dev *bactype.Device) error {
 	return nil
 }
 
-func (c *Client) objectInformation(dev *bactype.Device, objs []bactype.Object) error {
+func (c *client) objectInformation(dev *bactype.Device, objs []bactype.Object) error {
 	// Often times the map will re arrange the order it spits out
 	// so we need to keep track since the response will be in the
 	// same order we issue the commands.
 	keys := make([]bactype.ObjectID, len(objs))
 	counter := 0
-	rpm := bactype.ReadMultipleProperty{
+	rpm := bactype.MultiplePropertyData{
 		Objects: []bactype.Object{},
 	}
 
@@ -137,11 +136,11 @@ func (c *Client) objectInformation(dev *bactype.Device, objs []bactype.Object) e
 			ID: o.ID,
 			Properties: []bactype.Property{
 				bactype.Property{
-					Type:       property.ObjectName,
+					Type:       bactype.PropObjectName,
 					ArrayIndex: bactype.ArrayAll,
 				},
 				bactype.Property{
-					Type:       property.Description,
+					Type:       bactype.PropDescription,
 					ArrayIndex: bactype.ArrayAll,
 				},
 			},
@@ -171,7 +170,7 @@ func (c *Client) objectInformation(dev *bactype.Device, objs []bactype.Object) e
 	return nil
 }
 
-func (c *Client) allObjectInformation(dev *bactype.Device) error {
+func (c *client) allObjectInformation(dev *bactype.Device) error {
 	objs := dev.ObjectSlice()
 	incrSize := 5
 
@@ -192,7 +191,7 @@ func (c *Client) allObjectInformation(dev *bactype.Device) error {
 // gather additional information from the object such as the name and
 // description of the objects. The device returned contains all of the name and
 // description fields for all objects
-func (c *Client) Objects(dev bactype.Device) (bactype.Device, error) {
+func (c *client) Objects(dev bactype.Device) (bactype.Device, error) {
 	err := c.objectList(&dev)
 	if err != nil {
 		return dev, fmt.Errorf("unable to get object list: %v", err)

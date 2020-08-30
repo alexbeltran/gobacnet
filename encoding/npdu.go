@@ -36,7 +36,7 @@ import (
 )
 
 // NPDU encodes the network layer control message
-func (e *Encoder) NPDU(n bactype.NPDU) {
+func (e *Encoder) NPDU(n *bactype.NPDU) {
 	e.write(n.Version)
 
 	// Prepare metadata into the second byte

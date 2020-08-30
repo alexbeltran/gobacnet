@@ -29,17 +29,34 @@ based on this file might be covered by the GNU General Public
 License.
 */
 
-package gobacnet
+package types
 
-// MTSP
-const defaultMTSPBAUD = 38400
-const defaultMTSPMAC = 127
+type Enumerated uint32
 
-// General Bacnet
-const defaultMaxMaster = 127
-const defautlMaxInfoFrames = 1
+type IAm struct {
+	ID           ObjectID
+	MaxApdu      uint32
+	Segmentation Enumerated
+	Vendor       uint32
+	Addr         Address
+}
 
-// ArrayAll is used when reading/writting to a property to read/write the entire
-// array
-const ArrayAll = 0xFFFFFFFF
-const maxStandardBacnetType = 128
+type Device struct {
+	ID           ObjectID
+	MaxApdu      uint32
+	Segmentation Enumerated
+	Vendor       uint32
+	Addr         Address
+	Objects      ObjectMap
+}
+
+// ObjectSlice returns all the objects in the device as a slice (not thread-safe)
+func (dev *Device) ObjectSlice() []Object {
+	var objs []Object
+	for _, objMap := range dev.Objects {
+		for _, o := range objMap {
+			objs = append(objs, o)
+		}
+	}
+	return objs
+}

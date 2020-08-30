@@ -197,3 +197,11 @@ func TestStringUnicode(t *testing.T) {
 		t.Fatal("an unknown code was prepending to output")
 	}
 }
+
+func TestReverseBitsInByte(t *testing.T) {
+	var a byte = 0x0F
+	a = byteReverseBits(a)
+	if a != 0xF0 {
+		t.Errorf("byteReverseBits error")
+	}
+}

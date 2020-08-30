@@ -152,6 +152,9 @@ func (t *TSM) ID(ctx context.Context) (int, error) {
 	s.state = idle
 	s.requestTimer = 0 // TODO: apdu_timeout
 	s.data = make(chan interface{})
+
+	t.mutex.Lock()
+	defer t.mutex.Unlock()
 	t.states[id] = s
 	return id, nil
 }

@@ -15,6 +15,7 @@ package cmd
 
 import (
 	"encoding/json"
+	"github.com/alexbeltran/gobacnet/datalink"
 	"log"
 	"os"
 
@@ -37,11 +38,13 @@ var whoIsCmd = &cobra.Command{
 }
 
 func main(cmd *cobra.Command, args []string) {
-	c, err := gobacnet.NewClient(Interface, Port)
+	dataLink, err := datalink.NewUDPDataLink(Interface, Port)
 	if err != nil {
 		log.Fatal(err)
 	}
+	c := gobacnet.NewClient(dataLink, 0)
 	defer c.Close()
+	go c.Run()
 
 	ids, err := c.WhoIs(startRange, endRange)
 	if err != nil {

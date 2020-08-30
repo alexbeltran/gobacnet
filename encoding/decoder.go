@@ -34,16 +34,13 @@ package encoding
 import (
 	"bytes"
 	"encoding/binary"
-	"fmt"
-
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
 // Decoder used
 type Decoder struct {
-	buff       *bytes.Buffer
-	err        error
-	tagCounter int
+	buff *bytes.Buffer
+	err  error
 }
 
 func (d *Decoder) len() int {
@@ -53,7 +50,6 @@ func NewDecoder(b []byte) *Decoder {
 	return &Decoder{
 		bytes.NewBuffer(b),
 		nil,
-		0,
 	}
 }
 
@@ -65,21 +61,29 @@ func (d *Decoder) Bytes() []byte {
 	return d.buff.Bytes()
 }
 
+func (d *Decoder) ReadByte() (byte, error) {
+	return d.buff.ReadByte()
+}
+
+func (d *Decoder) Read(data []byte) (int, error) {
+	return d.buff.Read(data)
+}
+
+func (d *Decoder) Skip(n uint32) error {
+	_, d.err = d.buff.Read(make([]byte, n))
+	return d.err
+}
+
+func (d *Decoder) UnreadByte() error {
+	return d.buff.UnreadByte()
+}
+
 func (d *Decoder) decode(data interface{}) {
 	// Only decode if there have been no errors so far
 	if d.err != nil {
 		return
 	}
 	d.err = binary.Read(d.buff, EncodingEndian, data)
-}
-func (d *Decoder) tagCheck(inTag uint8) {
-	if d.tagCounter != int(inTag) {
-		d.err = fmt.Errorf("Mismatch in tag id. Tag ID should be %d but is %d", d.tagCounter, inTag)
-	}
-}
-
-func (d *Decoder) tagIncr() {
-	d.tagCounter++
 }
 
 // contexTag decoder
@@ -207,4 +211,25 @@ func (d *Decoder) signed(length int) int32 {
 	default:
 		return 0
 	}
+}
+
+func (d *Decoder) bitString(length int) *bactype.BitString {
+	if length <= 0 {
+		return nil
+	}
+	data := make([]uint8, length)
+	d.decode(data)
+	//refer to  https://github.com/bacnet-stack/bacnet-stack/blob/bacnet-stack-0.9.1/src/bacdcode.c#L672
+	bs := bactype.NewBitString(length - 1)
+	/* the lower 3 bits of the first byte contains the unused bits in the remain bytes and the remain bytes contain the bit masks*/
+	bytesUsed := uint8(length - 1)
+	if bytesUsed <= bactype.MaxBitStringBytes {
+		for i := uint8(0); i < bytesUsed; i++ {
+			//index of data start from 1
+			bs.SetByte(i, byteReverseBits(data[i+1]))
+		}
+		/*the lower 3 bits of the first byte store the number of unused bits , that is, less than 8*/
+		bs.SetBitsUsed(bytesUsed, data[0]&0x07)
+	}
+	return bs
 }

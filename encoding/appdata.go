@@ -132,18 +132,28 @@ func (e *Encoder) date(dt bactype.Date) {
 	e.write(uint8(dt.DayOfWeek))
 }
 
-func (d *Decoder) date(dt *bactype.Date) {
-	var year, month, day, dayOfWeek uint8
-
-	if dt.Year != bactype.UnspecifiedTime {
-		dt.Year = int(year) + epochYear
-	} else {
-		dt.Year = int(year)
+func (d *Decoder) date(dt *bactype.Date, length int) {
+	if length <= 0 {
+		return
+	}
+	data := make([]byte, length)
+	_, d.err = d.Read(data)
+	if d.err != nil {
+		return
+	}
+	if len(data) < 4 {
+		return
 	}
 
-	dt.Month = int(month)
-	dt.Day = int(day)
-	dt.DayOfWeek = bactype.DayOfWeek(dayOfWeek)
+	if dt.Year != bactype.UnspecifiedTime {
+		dt.Year = int(data[0]) + epochYear
+	} else {
+		dt.Year = int(data[0])
+	}
+
+	dt.Month = int(data[1])
+	dt.Day = int(data[2])
+	dt.DayOfWeek = bactype.DayOfWeek(data[3])
 }
 
 func (e *Encoder) time(t bactype.Time) {
@@ -154,18 +164,19 @@ func (e *Encoder) time(t bactype.Time) {
 	// Stored as 1/100 of a second
 	e.write(uint8(t.Millisecond / 10))
 }
-func (d *Decoder) time(t *bactype.Time) {
-	var hour, min, sec, centisec uint8
-	d.decode(&hour)
-	d.decode(&min)
-	d.decode(&sec)
-	// Yeah, they report centisecs instead of milliseconds.
-	d.decode(&centisec)
+func (d *Decoder) time(t *bactype.Time, length int) {
+	if length <= 0 {
+		return
+	}
+	data := make([]byte, length)
+	if _, d.err = d.Read(data); d.err != nil {
+		return
+	}
 
-	t.Hour = int(hour)
-	t.Minute = int(min)
-	t.Second = int(sec)
-	t.Millisecond = int(centisec) * 10
+	t.Hour = int(data[0])
+	t.Minute = int(data[1])
+	t.Second = int(data[2])
+	t.Millisecond = int(data[3]) * 10
 
 }
 
@@ -214,6 +225,11 @@ func (e *Encoder) AppData(i interface{}) error {
 		length := valueLength(val)
 		e.tag(tagInfo{ID: tagUint, Context: appLayerContext, Value: uint32(length)})
 		e.unsigned(val)
+	case int32:
+		v := uint32(val)
+		length := valueLength(v)
+		e.tag(tagInfo{ID: tagInt, Context: appLayerContext, Value: uint32(length)})
+		e.unsigned(v)
 
 	// Enumerated is pretty much a wrapper for a uint32 with an enumerated associated with it.
 	case bactype.Enumerated:
@@ -225,6 +241,9 @@ func (e *Encoder) AppData(i interface{}) error {
 		e.tag(tagInfo{ID: tagObjectID, Context: appLayerContext, Value: objectIDLen})
 		e.objectId(val.Type, val.Instance)
 
+	case bactype.Null:
+		e.tag(tagInfo{ID: tagNull, Context: appLayerContext})
+
 	default:
 		err := fmt.Errorf("Unknown type %T", i)
 		// Set global error
@@ -234,13 +253,10 @@ func (e *Encoder) AppData(i interface{}) error {
 	return nil
 }
 
-func (d *Decoder) AppData() (interface{}, error) {
-	tag, _, lenvalue := d.tagNumberAndValue()
-	len := int(lenvalue)
-
+func (d *Decoder) AppDataOfTag(tag uint8, len int) (interface{}, error) {
 	switch tag {
 	case tagNull:
-		return nil, fmt.Errorf("Null tag")
+		return bactype.Null{}, nil
 	case tagBool:
 		// Originally this was in C so non 0 values are considered
 		// true
@@ -268,16 +284,16 @@ func (d *Decoder) AppData() (interface{}, error) {
 		err := d.string(&s, len-1)
 		return s, err
 	case tagBitString:
-		return nil, fmt.Errorf("decoding bit strings is currently unsupported")
+		return d.bitString(len), d.Error()
 	case tagEnumerated:
 		return d.enumerated(len), d.Error()
 	case tagDate:
 		var date bactype.Date
-		d.date(&date)
+		d.date(&date, len)
 		return date, d.Error()
 	case tagTime:
 		var t bactype.Time
-		d.time(&t)
+		d.time(&t, len)
 		return t, d.Error()
 	case tagObjectID:
 		objType, objInstance := d.objectId()
@@ -288,4 +304,8 @@ func (d *Decoder) AppData() (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("Unsupported tag: %d", tag)
 	}
+}
+func (d *Decoder) AppData() (interface{}, error) {
+	tag, _, lenvalue := d.tagNumberAndValue()
+	return d.AppDataOfTag(tag, int(lenvalue))
 }

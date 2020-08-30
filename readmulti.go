@@ -42,14 +42,14 @@ import (
 
 const maxReattempt = 2
 
-// ReadMultipleProperty uses the given device and read property request to read
+// ReadMultiProperty uses the given device and read property request to read
 // from a device. Along with being able to read multiple properties from a
 // device, it can also read these properties from multiple objects. This is a
 // good feature to read all present values of every object in the device. This
 // is a batch operation compared to a ReadProperty and should be used in place
 // when reading more than two objects/properties.
-func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultipleProperty) (bactype.ReadMultipleProperty, error) {
-	var out bactype.ReadMultipleProperty
+func (c *client) ReadMultiProperty(dev bactype.Device, rp bactype.MultiplePropertyData) (bactype.MultiplePropertyData, error) {
+	var out bactype.MultiplePropertyData
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -59,22 +59,18 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 	}
 	defer c.tsm.Put(id)
 
-	udp, err := c.localUDPAddress()
-	if err != nil {
-		return out, err
-	}
-	src := bactype.UDPToAddress(udp)
-
-	enc := encoding.NewEncoder()
-	enc.NPDU(bactype.NPDU{
+	npdu := &bactype.NPDU{
 		Version:               bactype.ProtocolVersion,
 		Destination:           &dev.Addr,
-		Source:                &src,
+		Source:                c.dataLink.GetMyAddress(),
 		IsNetworkLayerMessage: false,
 		ExpectingReply:        true,
 		Priority:              bactype.Normal,
 		HopCount:              bactype.DefaultHopCount,
-	})
+	}
+
+	enc := encoding.NewEncoder()
+	enc.NPDU(npdu)
 	enc.ReadMultipleProperty(uint8(id), rp)
 	if enc.Error() != nil {
 		return out, fmt.Errorf("encoding read multiple property failed: %v", err)
@@ -88,7 +84,7 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 	err = fmt.Errorf("go")
 
 	for count := 0; err != nil && count < maxReattempt; count++ {
-		out, err = c.sendReadMultipleProperty(id, dev, pack)
+		out, err = c.sendReadMultipleProperty(id, dev, npdu, pack)
 		if err == nil {
 			return out, nil
 		}
@@ -96,9 +92,9 @@ func (c *Client) ReadMultiProperty(dev bactype.Device, rp bactype.ReadMultiplePr
 	return out, fmt.Errorf("failed %d tries: %v", maxReattempt, err)
 }
 
-func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, request []byte) (bactype.ReadMultipleProperty, error) {
-	var out bactype.ReadMultipleProperty
-	_, err := c.send(dev.Addr, request)
+func (c *client) sendReadMultipleProperty(id int, dev bactype.Device, npdu *bactype.NPDU, request []byte) (bactype.MultiplePropertyData, error) {
+	var out bactype.MultiplePropertyData
+	_, err := c.Send(dev.Addr, npdu, request)
 	if err != nil {
 		return out, err
 	}
@@ -111,7 +107,7 @@ func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, request []
 	var b []byte
 	switch v := raw.(type) {
 	case error:
-		return out, err
+		return out, v
 	case []byte:
 		b = v
 	default:
@@ -121,7 +117,13 @@ func (c *Client) sendReadMultipleProperty(id int, dev bactype.Device, request []
 	dec := encoding.NewDecoder(b)
 
 	var apdu bactype.APDU
-	dec.APDU(&apdu)
+	if err = dec.APDU(&apdu); err != nil {
+		return out, err
+	}
+	if apdu.Error.Class != 0 || apdu.Error.Code != 0 {
+		err = fmt.Errorf("received error, class: %d, code: %d", apdu.Error.Class, apdu.Error.Code)
+		return out, err
+	}
 	err = dec.ReadMultiplePropertyAck(&out)
 	if err != nil {
 		c.log.Debugf("WEIRD PACKET: %v: %v", err, b)

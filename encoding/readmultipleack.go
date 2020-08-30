@@ -2,11 +2,10 @@ package encoding
 
 import (
 	"fmt"
-
 	bactype "github.com/alexbeltran/gobacnet/types"
 )
 
-func (e *Encoder) ReadMultiplePropertyAck(invokeID uint8, data bactype.ReadMultipleProperty) error {
+func (e *Encoder) ReadMultiplePropertyAck(invokeID uint8, data bactype.MultiplePropertyData) error {
 	a := bactype.APDU{
 		DataType: bactype.ComplexAck,
 		Service:  bactype.ServiceConfirmedReadPropMultiple,
@@ -43,7 +42,7 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 	for _, prop := range properties {
 		// Tag 2 - Property ID
 		tag = 2
-		e.contextEnumerated(tag, prop.Type)
+		e.contextEnumerated(tag, uint32(prop.Type))
 
 		// Tag 3 (OPTIONAL) - Array Length
 		tag++
@@ -63,7 +62,7 @@ func (e *Encoder) propertiesWithData(properties []bactype.Property) error {
 	return e.Error()
 }
 
-func (d *Decoder) ReadMultiplePropertyAck(data *bactype.ReadMultipleProperty) error {
+func (d *Decoder) ReadMultiplePropertyAck(data *bactype.MultiplePropertyData) error {
 	err := d.objectsWithData(&data.Objects)
 	if err != nil {
 		d.err = err
@@ -102,46 +101,41 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 		obj.Properties = []bactype.Property{}
 
 		// Tag 0 - Object ID
-		var expectedTag uint8
 		tag, meta, length := d.tagNumberAndValue()
-		objType, instance := d.objectId()
-
-		if tag != expectedTag {
-			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-		}
-		if !meta.isContextSpecific() {
+		if tag != 0 {
+			return &ErrorIncorrectTag{Expected: 0, Given: tag}
+		} else if !meta.isContextSpecific() {
 			return &ErrorWrongTagType{ContextTag}
 		}
-
-		obj.ID.Type = objType
-		obj.ID.Instance = instance
+		obj.ID.Type, obj.ID.Instance = d.objectId()
 
 		// Tag 1 - Opening Tag
-		expectedTag++
 		tag, meta = d.tagNumber()
-		if tag != expectedTag {
-			return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-		}
-		if !meta.isOpening() {
+		if tag != 1 {
+			return &ErrorIncorrectTag{Expected: 1, Given: tag}
+		} else if !meta.isOpening() {
 			return &ErrorWrongTagType{OpeningTag}
 		}
+
 		// Tag 2 - Property Tag
 		tag, meta, length = d.tagNumberAndValue()
+		if tag != 2 {
+			return &ErrorIncorrectTag{Expected: 2, Given: tag}
+		}
 
 		for d.len() > 0 && tag == 2 && !meta.isClosing() {
-			expectedTag = 2
 			if !meta.isContextSpecific() {
 				return &ErrorWrongTagType{ContextTag}
 			}
-			if tag != expectedTag {
-				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-			}
+
 			prop := bactype.Property{}
-			prop.Type = d.enumerated(int(length))
+			prop.Type = bactype.PropertyType(d.enumerated(int(length)))
 
 			// Tag 3 - (Optional) Array Length
 			tag, meta = d.tagNumber()
-			if tag == 3 {
+			if tag == 2 {
+				continue
+			} else if tag == 3 {
 				if !meta.isContextSpecific() {
 					return &ErrorWrongTagType{ContextTag}
 				}
@@ -154,51 +148,95 @@ func (d *Decoder) objectsWithData(objects *[]bactype.Object) error {
 			}
 
 			// Tag 4 - Opening Tag
-			expectedTag = 4
-			if tag != expectedTag {
-				if tag == 5 {
-					var class, code uint32
-					err := d.bacError(&class, &code)
-					if err != nil {
-						return err
-					}
-					return fmt.Errorf("Class %d Code %d", class, code)
+			if tag == 4 && meta.isOpening() {
+				var array []interface{}
+				tag, meta = d.tagNumber()
+				if d.err != nil {
+					return d.err
 				}
-				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-			}
-			if !meta.isOpening() {
-				return &ErrorWrongTagType{OpeningTag}
-			}
-			data, err := d.AppData()
-			if err != nil {
-				return err
-			}
-			prop.Data = data
-			obj.Properties = append(obj.Properties, prop)
+				for {
+					if meta.isContextSpecific() {
+						if meta.isClosing() {
+							_ = d.UnreadByte()
+						} else if meta.isOpening() {
+							if /*prop.Type == bactype.PROP_EVENT_TIME_STAMPS &&*/ tag == bactype.TimeStampDatetime {
+								dt := &bactype.DataTime{}
+								for {
+									tag, meta, length = d.tagNumberAndValue()
+									if meta.isClosing() && tag == bactype.TimeStampDatetime {
+										break
+									} else if tag == tagDate {
+										d.date(&dt.Date, int(length))
+									} else if tag == tagTime {
+										d.time(&dt.Time, int(length))
+									} else if length > 0 {
+										d.Skip(length)
+									}
+								}
+								array = append(array, dt)
+							}
+						} else {
+							// TODO how to parse it in Context???
+							*objects = append(*objects, obj)
+							return nil
 
-			tag, meta = d.tagNumber()
-			expectedTag = 4
-			if tag != expectedTag {
-				return &ErrorIncorrectTag{Expected: expectedTag, Given: tag}
-			}
-			if !meta.isClosing() {
-				return &ErrorWrongTagType{ClosingTag}
-			}
+							lenValue := d.value(meta)
+							tag = tagTypeInContext(prop.Type, tag)
+							if tag == maxTag {
+								//skip unknown type
+								if lenValue > 0 {
+									if _, err := d.Read(make([]byte, lenValue)); err != nil {
+										return err
+									}
+								}
+							} else {
+								data, err := d.AppDataOfTag(tag, int(lenValue))
+								if err != nil {
+									return err
+								}
+								array = append(array, data)
+							}
+						}
+					} else {
+						data, err := d.AppDataOfTag(tag, int(d.value(meta)))
+						if err != nil {
+							return err
+						}
+						array = append(array, data)
+					}
+					tag, meta = d.tagNumber()
+					if meta.isClosing() && tag == 4 { //tag 4
+						//
+						break
+					} /*else {
+						_ = d.UnreadByte()
+					}*/
+				}
+				if len(array) == 1 {
+					prop.Data = array[0]
+				} else {
+					prop.Data = array
+				}
+				obj.Properties = append(obj.Properties, prop)
 
-			tag, meta, length = d.tagNumberAndValue()
-			// Tag 5 - (Optional) Error Code
-			expectedTag = 5
-			if tag == expectedTag {
-				// We have an error
-				if !meta.isOpening() {
-					return &ErrorWrongTagType{OpeningTag}
+				tag, meta, length = d.tagNumberAndValue()
+			} else if tag == 5 && meta.isOpening() {
+				//Tag 5 error
+				var class, code uint32
+				err := d.bacError(&class, &code)
+				if err != nil {
+					return err
 				}
 				tag, meta = d.tagNumber()
-				if !meta.isClosing() {
-					return &ErrorWrongTagType{ClosingTag}
+				if tag == 5 && meta.isClosing() {
+					//
 				}
+				return fmt.Errorf("Class %d Code %d", class, code)
+			} else {
+				return &ErrorIncorrectTag{Expected: 4, Given: tag}
 			}
 		}
+
 		*objects = append(*objects, obj)
 	}
 	return d.Error()
