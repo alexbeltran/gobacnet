@@ -194,7 +194,10 @@ func (om ObjectMap) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (om ObjectMap) UnmarshalJSON(data []byte) error {
+func (om *ObjectMap) UnmarshalJSON(data []byte) error {
+	if *om == nil {
+		*om = make(map[ObjectType]map[ObjectInstance]Object, 0)
+	}
 	m := make(map[string]map[ObjectInstance]Object, 0)
 	err := json.Unmarshal(data, &m)
 	if err != nil {
@@ -203,11 +206,11 @@ func (om ObjectMap) UnmarshalJSON(data []byte) error {
 
 	for t, sub := range m {
 		key := GetType(t)
-		if om[key] == nil {
-			om[key] = make(map[ObjectInstance]Object)
+		if (*om)[key] == nil {
+			(*om)[key] = make(map[ObjectInstance]Object)
 		}
 		for inst, obj := range sub {
-			om[key][inst] = obj
+			(*om)[key][inst] = obj
 		}
 	}
 	return nil
