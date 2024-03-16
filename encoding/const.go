@@ -61,5 +61,6 @@ type stringType uint8
 
 // Supported String types
 const (
-	stringUTF8 stringType = 0
+	stringUTF8  stringType = 0
+	stringASCII stringType = 4
 )
