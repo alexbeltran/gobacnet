@@ -61,7 +61,7 @@ func (e *Encoder) APDU(a bactype.APDU) error {
 	case bactype.Abort:
 		return fmt.Errorf("Decoded Aborted")
 	default:
-		return fmt.Errorf("Unknown PDU type:%d", meta.DataType)
+		return fmt.Errorf("Unknown PDU type:%d", meta.DataType())
 	}
 	return nil
 }

@@ -100,18 +100,34 @@ func (e *Encoder) string(s string) {
 	e.write(stringUTF8)
 	e.write([]byte(s))
 }
+
 func (d *Decoder) string(s *string, len int) error {
 	var t stringType
 	d.decode(&t)
-	if t != stringUTF8 {
-		return fmt.Errorf("unsupported string format %d", t)
-	}
-
 	b := make([]byte, len)
 	d.decode(b)
-	*s = string(b)
+	if t == stringASCII {
+		*s = asciiDecode(b)
+	} else if t == stringUTF8 {
+		*s = string(b)
+	} else {
+		return fmt.Errorf("unsupported string format %d", t)
+	}
 	return d.Error()
 }
+
+func asciiDecode(data []byte) string {
+	result := ""
+	for _, b := range data {
+		if b == 0 {
+			continue
+		}
+		d := string(b)
+		result += d
+	}
+	return result
+}
+
 func (e *Encoder) octetstring(b []byte) {
 	e.write([]byte(b))
 }
