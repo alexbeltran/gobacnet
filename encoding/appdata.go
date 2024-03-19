@@ -241,6 +241,9 @@ func (e *Encoder) AppData(i interface{}) error {
 		e.tag(tagInfo{ID: tagObjectID, Context: appLayerContext, Value: objectIDLen})
 		e.objectId(val.Type, val.Instance)
 
+	case bactype.Null:
+		e.tag(tagInfo{ID: tagNull, Context: appLayerContext})
+
 	default:
 		err := fmt.Errorf("Unknown type %T", i)
 		// Set global error
@@ -256,7 +259,7 @@ func (d *Decoder) AppData() (interface{}, error) {
 
 	switch tag {
 	case tagNull:
-		return nil, fmt.Errorf("Null tag")
+		return bactype.Null{}, nil
 	case tagBool:
 		// Originally this was in C so non 0 values are considered
 		// true

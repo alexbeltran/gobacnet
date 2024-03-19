@@ -112,6 +112,10 @@ func readProp(cmd *cobra.Command, args []string) {
 		}
 		log.Fatal(err)
 	}
+	if len(out.Object.Properties) == 0 {
+		fmt.Println("No value returned")
+		return
+	}
 	fmt.Println(out.Object.Properties[0].Data)
 }
 func init() {

@@ -96,6 +96,8 @@ func (d *Decoder) APDU(a *bactype.APDU) error {
 	switch a.DataType {
 	case bactype.ComplexAck:
 		return d.apduComplexAck(a)
+	case bactype.SimpleAck:
+		return d.apduSimpleAck(a)
 	case bactype.UnconfirmedServiceRequest:
 		return d.apduUnconfirmed(a)
 	case bactype.ConfirmedServiceRequest:
@@ -142,6 +144,12 @@ func (d *Decoder) apduError(a *bactype.APDU) error {
 }
 
 func (d *Decoder) apduComplexAck(a *bactype.APDU) error {
+	d.decode(&a.InvokeId)
+	d.decode(&a.Service)
+	return d.Error()
+}
+
+func (d *Decoder) apduSimpleAck(a *bactype.APDU) error {
 	d.decode(&a.InvokeId)
 	d.decode(&a.Service)
 	return d.Error()
